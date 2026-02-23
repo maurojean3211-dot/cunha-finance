@@ -2,288 +2,147 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Login from "./Login";
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer
-} from "recharts";
+const ADMIN_EMAIL = "maurojean3211@gmail.com";
 
 function App() {
 
   const hoje = new Date();
 
-  const EMPRESA_ID = "d99b2aa4-a8ba-4c5f-b594-efa2d0d713cb";
-
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+
+  const [assinatura, setAssinatura] = useState(null);
+  const [loadingPlano, setLoadingPlano] = useState(true);
+
   const [lancamentos, setLancamentos] = useState([]);
-
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [tipo, setTipo] = useState("receita");
-  const [categoria, setCategoria] = useState("");
-
-  const [pixLink, setPixLink] = useState(null);
-  const [loadingPix, setLoadingPix] = useState(false);
 
   const mesSelecionado = hoje.getMonth() + 1;
   const anoSelecionado = hoje.getFullYear();
 
   // ================= AUTH =================
   useEffect(() => {
+
     async function iniciarAuth() {
-
-      const { data: { session } } =
-        await supabase.auth.getSession();
-
-      setUser(session?.user ?? null);
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user ?? null);
       setLoadingAuth(false);
-
-      supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
-      });
     }
 
     iniciarAuth();
+
+    const { data:{ subscription } } =
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+    return () => subscription.unsubscribe();
+
   }, []);
 
-  // ================= CARREGAR =================
+  // ================= LOGOUT =================
+  async function sair(){
+    await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  // ================= ASSINATURA =================
+  async function carregarAssinatura(usuario) {
+
+    const { data } = await supabase
+      .from("assinaturas")
+      .select("*")
+      .eq("user_id", usuario.id)
+      .single();
+
+    setAssinatura(data);
+    setLoadingPlano(false);
+  }
+
+  // ================= LANÇAMENTOS =================
   async function carregarLancamentos() {
+
+    if (!user) return;
 
     const { data } = await supabase
       .from("lancamentos")
       .select("*")
-      .eq("empresa_id", EMPRESA_ID)
+      .eq("user_id", user.id)
       .eq("mes", mesSelecionado)
       .eq("ano", anoSelecionado)
-      .order("created_at", { ascending: false });
+      .order("created_at",{ascending:false});
 
     setLancamentos(data || []);
   }
 
   useEffect(() => {
-    if (user) carregarLancamentos();
+    if(user){
+      carregarLancamentos();
+      carregarAssinatura(user);
+    }
   }, [user]);
 
-  // ================= ADICIONAR =================
-  async function adicionarLancamento() {
+  // ================= TELAS =================
 
-    if (!descricao || !valor || !categoria) {
-      alert("Preencha todos os campos");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("lancamentos")
-      .insert([
-        {
-          descricao,
-          valor: Number(valor),
-          tipo,
-          categoria,
-          data: new Date(),
-          mes: mesSelecionado,
-          ano: anoSelecionado,
-          empresa_id: EMPRESA_ID
-        }
-      ]);
-
-    if (error) {
-      alert("Erro ao salvar");
-      console.log(error);
-      return;
-    }
-
-    setDescricao("");
-    setValor("");
-    setTipo("receita");
-    setCategoria("");
-
-    carregarLancamentos();
-  }
-
-  // ================= PIX =================
-  async function assinarPlano() {
-
-    if (loadingPix) return;
-
-    setLoadingPix(true);
-
-    const result =
-      await supabase.functions.invoke("pix-worker");
-
-    if (result.error) {
-      alert("Erro ao gerar PIX");
-      setLoadingPix(false);
-      return;
-    }
-
-    setPixLink(result?.data?.pixLink);
-    setLoadingPix(false);
-  }
-
-  // ================= SALDO =================
-  const saldo = lancamentos.reduce(
-    (t, i) =>
-      i.tipo === "receita"
-        ? t + Number(i.valor)
-        : t - Number(i.valor),
-    0
-  );
-
-  // ================= RESUMO POR CATEGORIA =================
-  const resumoCategorias = lancamentos.reduce((acc, item) => {
-
-    const categoriaNome = item.categoria || "Sem categoria";
-
-    if (!acc[categoriaNome]) {
-      acc[categoriaNome] = 0;
-    }
-
-    acc[categoriaNome] +=
-      item.tipo === "receita"
-        ? Number(item.valor)
-        : -Number(item.valor);
-
-    return acc;
-
-  }, {});
-
-  // ================= DADOS DO GRÁFICO =================
-  const dadosGrafico = Object.entries(resumoCategorias)
-    .map(([name, value]) => ({
-      name,
-      value: Math.abs(value)
-    }))
-    .filter(item => item.value > 0);
-
-  // ===== CARREGANDO =====
-  if (loadingAuth)
+  if(loadingAuth)
     return <div style={container}>Carregando...</div>;
 
-  // ===== LOGIN =====
-  if (!user)
+  if(!user)
     return <Login onLogin={(u)=>setUser(u)} />;
 
-  // ===== APP =====
-  return (
+  // 👑 ADMIN
+  if(user.email === ADMIN_EMAIL){
+    return(
+      <div style={container}>
+        <div style={app}>
+          <h2>👑 Painel Empresa</h2>
+
+          <p>Você está logado como ADMIN</p>
+
+          <button style={botao} onClick={sair}>
+            🚪 Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if(loadingPlano)
+    return <div style={container}>Verificando plano...</div>;
+
+  // 🔒 BLOQUEIO
+  if(assinatura && !assinatura.ativo && !assinatura.isento){
+    return(
+      <div style={container}>
+        <div style={app}>
+          <h2>💜 Cunha Finance</h2>
+          <h3>Acesso bloqueado</h3>
+          <p>Plano mensal: R$ 100,00</p>
+
+          <button style={botao} onClick={sair}>
+            🚪 Sair
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ================= APP NORMAL =================
+  return(
     <div style={container}>
       <div style={app}>
 
-        <h2 style={{ textAlign: "center" }}>💜 Cunha Finance</h2>
+        <h2>💜 Cunha Finance</h2>
 
-        <button style={botao} onClick={assinarPlano}>
-          {loadingPix ? "Gerando PIX..." : "💜 Assinar Plano"}
+        <h3>Bem vindo:</h3>
+        <p>{user.email}</p>
+
+        <button style={botao} onClick={sair}>
+          🚪 Sair
         </button>
 
-        {pixLink && (
-          <a href={pixLink} target="_blank" rel="noreferrer">
-            <button style={botao}>💜 Pagar com PIX</button>
-          </a>
-        )}
-
-        <div style={saldoCard}>
-          <p>Saldo do mês</p>
-          <h1>R$ {saldo.toFixed(2)}</h1>
-        </div>
-
-        {/* RESUMO */}
-        <h3 style={{marginTop:20}}>📊 Resumo por Categoria</h3>
-
-        {Object.entries(resumoCategorias).map(([cat, total]) => (
-          <div key={cat} style={itemCard}>
-            <span>{cat}</span>
-            <span style={{
-              color: total >= 0 ? "#22c55e" : "#ef4444",
-              fontWeight:"bold"
-            }}>
-              R$ {total.toFixed(2)}
-            </span>
-          </div>
-        ))}
-
-        {/* GRÁFICO */}
-        <h3 style={{marginTop:20}}>📊 Gastos por Categoria</h3>
-
-        <div style={{width:"100%", height:250}}>
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={dadosGrafico}
-                dataKey="value"
-                nameKey="name"
-                outerRadius={90}
-                label
-              >
-                {dadosGrafico.map((_, index) => (
-                  <Cell key={index} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div style={{ marginTop: 20 }}>
-          <h3>Novo Lançamento</h3>
-
-          <input style={input} placeholder="Descrição"
-            value={descricao}
-            onChange={(e)=>setDescricao(e.target.value)}
-          />
-
-          <input style={input} type="number"
-            placeholder="Valor"
-            value={valor}
-            onChange={(e)=>setValor(e.target.value)}
-          />
-
-          <select style={input}
-            value={tipo}
-            onChange={(e)=>setTipo(e.target.value)}
-          >
-            <option value="receita">Receita</option>
-            <option value="despesa">Despesa</option>
-          </select>
-
-          <select style={input}
-            value={categoria}
-            onChange={(e)=>setCategoria(e.target.value)}
-          >
-            <option value="">Categoria</option>
-            <option value="Casa">Casa</option>
-            <option value="Gasolina">Gasolina</option>
-            <option value="Viagem">Viagem</option>
-            <option value="Compras">Compras</option>
-            <option value="Comissão">Comissão</option>
-            <option value="Empresa">Empresa</option>
-          </select>
-
-          <button style={botao} onClick={adicionarLancamento}>
-            ➕ Adicionar
-          </button>
-        </div>
-
-        <div style={{ marginTop: 20 }}>
-          <h3>Lançamentos</h3>
-
-          {lancamentos.map((item) => (
-            <div key={item.id} style={itemCard}>
-              <span>
-                {item.descricao} — {item.categoria || "Sem categoria"}
-              </span>
-
-              <span style={{
-                color: item.tipo === "receita" ? "#22c55e" : "#ef4444",
-                fontWeight:"bold"
-              }}>
-                R$ {Number(item.valor).toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
+        <h3 style={{marginTop:20}}>
+          Seus lançamentos: {lancamentos.length}
+        </h3>
 
       </div>
     </div>
@@ -295,31 +154,15 @@ const container={
   minHeight:"100vh",
   display:"flex",
   justifyContent:"center",
-  padding:15,
+  padding:20,
   color:"white",
   fontFamily:"sans-serif"
 };
 
 const app={width:"100%",maxWidth:420};
 
-const saldoCard={
-  background:"linear-gradient(135deg,#8A05BE,#5F259F)",
-  padding:25,
-  borderRadius:20,
-  marginTop:15
-};
-
-const itemCard={
-  background:"#1a1a1a",
-  padding:12,
-  borderRadius:10,
-  marginBottom:8,
-  display:"flex",
-  justifyContent:"space-between",
-};
-
 const botao={
-  marginTop:10,
+  marginTop:15,
   padding:12,
   borderRadius:12,
   border:"none",
@@ -328,14 +171,6 @@ const botao={
   fontWeight:"bold",
   width:"100%",
   cursor:"pointer"
-};
-
-const input={
-  width:"100%",
-  padding:10,
-  marginTop:8,
-  borderRadius:8,
-  border:"none"
 };
 
 export default App;
