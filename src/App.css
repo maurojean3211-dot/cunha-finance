@@ -1,0 +1,78 @@
+/* ===== RESET ===== */
+body {
+  margin: 0;
+  background: #0f0c29;
+  font-family: sans-serif;
+}
+
+/* ===== CONTAINER PRINCIPAL ===== */
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
+  color: white;
+  display: flex;
+}
+
+/* ===== MENU ===== */
+.menu-lateral {
+  width: 240px;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  padding: 20px;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ===== CONTEÚDO ===== */
+.conteudo {
+  flex: 1;
+  padding: 30px;
+}
+
+/* ===== INPUTS ===== */
+input, select {
+  background: rgba(255,255,255,0.08);
+  color: white;
+  border: none;
+  outline: none;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 420px;
+}
+
+input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+/* ===== BOTÕES ===== */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: bold;
+}
+
+button:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+  transition: 0.2s;
+}
+
+/* ===== CARDS ===== */
+.card {
+  margin-top: 12px;
+  padding: 15px;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+}
+
+/* ===== RESUMO ===== */
+.resumo-box {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+}

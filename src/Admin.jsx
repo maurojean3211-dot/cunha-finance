@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import "./App.css";
 
 export default function Admin({ user, sair }) {
 
@@ -18,23 +19,24 @@ export default function Admin({ user, sair }) {
 
   // ================= DADOS =================
   const [lancamentos, setLancamentos] = useState([]);
-
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [tipo, setTipo] = useState("despesa");
 
-  useEffect(() => {
-    carregarTudo();
-  }, []);
-
   // ================= CARREGAR =================
+  useEffect(() => {
+    if (user?.id) carregarTudo();
+  }, [user]);
+
   async function carregarTudo() {
     const { data, error } = await supabase
       .from("lancamentos")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    console.log("LANCAMENTOS ADMIN:", data, error);
+    if (error) console.log(error);
+
     setLancamentos(data || []);
   }
 
@@ -46,7 +48,7 @@ export default function Admin({ user, sair }) {
       return;
     }
 
-    await supabase.from("lancamentos").insert({
+    const { error } = await supabase.from("lancamentos").insert({
       descricao,
       valor: Number(valor),
       tipo,
@@ -56,6 +58,11 @@ export default function Admin({ user, sair }) {
       user_id: user.id
     });
 
+    if (error) {
+      alert("Erro ao salvar");
+      return;
+    }
+
     setDescricao("");
     setValor("");
 
@@ -64,10 +71,12 @@ export default function Admin({ user, sair }) {
 
   // ================= EXCLUIR =================
   async function excluirLancamento(id) {
+
     await supabase
       .from("lancamentos")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     carregarTudo();
   }
@@ -85,16 +94,17 @@ export default function Admin({ user, sair }) {
 
   // ================= TELA =================
   return (
-    <div style={container}>
+    <div className="app-container">
 
-      {/* ===== MENU LATERAL ===== */}
-      <div style={menu}>
-        <h2>👑 Admin</h2>
+      {/* MENU LATERAL */}
+      <div className="menu-lateral">
+        <h2>💼 Cunha Finance</h2>
 
         {menuSistema.map(item => (
           <button
             key={item.id}
-            style={botaoMenu}
+            className="botao-primary"
+            style={{ marginTop: 10, width: "100%" }}
             onClick={() => setAba(item.id)}
           >
             {item.nome}
@@ -103,39 +113,42 @@ export default function Admin({ user, sair }) {
 
         <hr />
 
-        <p>{user.email}</p>
+        <p style={{ fontSize: 12 }}>{user.email}</p>
 
-        <button onClick={sair} style={botaoSair}>
+        <button
+          onClick={sair}
+          className="botao-primary"
+          style={{ marginTop: 20, width: "100%" }}
+        >
           🚪 Sair
         </button>
       </div>
 
-      {/* ===== CONTEÚDO ===== */}
-      <div style={conteudo}>
+      {/* CONTEÚDO */}
+      <div className="conteudo">
 
         {/* DASHBOARD */}
         {aba === "dashboard" && (
           <>
-            <h1>Painel Administrador</h1>
+            <h1>Painel Financeiro</h1>
 
-            <h2>Resumo Geral</h2>
-
-            <p>💰 Receitas: R$ {receitas.toFixed(2)}</p>
-            <p>💸 Despesas: R$ {despesas.toFixed(2)}</p>
-            <p>📊 Saldo: R$ {saldo.toFixed(2)}</p>
+            <div className="resumo-box">
+              <p>💰 Receitas: R$ {receitas.toFixed(2)}</p>
+              <p>💸 Despesas: R$ {despesas.toFixed(2)}</p>
+              <p>📊 Saldo: R$ {saldo.toFixed(2)}</p>
+            </div>
           </>
         )}
 
         {/* FINANCEIRO */}
         {aba === "financeiro" && (
           <>
-            <h2>➕ Meu Lançamento Pessoal</h2>
+            <h2>➕ Novo Lançamento</h2>
 
             <input
               placeholder="Descrição"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              style={input}
             />
 
             <input
@@ -143,30 +156,35 @@ export default function Admin({ user, sair }) {
               placeholder="Valor"
               value={valor}
               onChange={(e) => setValor(e.target.value)}
-              style={input}
             />
 
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
-              style={input}
             >
               <option value="receita">Receita</option>
               <option value="despesa">Despesa</option>
             </select>
 
-            <button onClick={adicionarLancamento} style={botao}>
+            <button
+              onClick={adicionarLancamento}
+              className="botao-primary"
+              style={{ marginTop: 12 }}
+            >
               ➕ Salvar Lançamento
             </button>
 
-            <h2>Todos os Lançamentos</h2>
+            <h2>Meus Lançamentos</h2>
 
             {lancamentos.map(l => (
-              <div key={l.id} style={card}>
+              <div key={l.id} className="card">
                 <strong>{l.descricao}</strong>
                 <p>R$ {Number(l.valor).toFixed(2)}</p>
 
-                <button onClick={() => excluirLancamento(l.id)}>
+                <button
+                  className="botao-danger"
+                  onClick={() => excluirLancamento(l.id)}
+                >
                   ❌ Excluir
                 </button>
               </div>
@@ -174,7 +192,6 @@ export default function Admin({ user, sair }) {
           </>
         )}
 
-        {/* TELAS FUTURAS */}
         {aba === "clientes" && <h2>👥 Clientes (em construção)</h2>}
         {aba === "produtos" && <h2>📦 Produtos (em construção)</h2>}
         {aba === "vendas" && <h2>🛒 Vendas (em construção)</h2>}
@@ -185,75 +202,3 @@ export default function Admin({ user, sair }) {
     </div>
   );
 }
-
-// ================= ESTILOS =================
-
-const container = {
-  display: "flex",
-  minHeight: "100vh",
-  background: "#0a0a0a",
-  color: "white",
-  fontFamily: "sans-serif"
-};
-
-const menu = {
-  width: 220,
-  background: "#111",
-  padding: 20
-};
-
-const conteudo = {
-  flex: 1,
-  padding: 30
-};
-
-const botaoMenu = {
-  display: "block",
-  width: "100%",
-  marginTop: 10,
-  padding: 10,
-  borderRadius: 8,
-  border: "none",
-  background: "#1f1f1f",
-  color: "white",
-  cursor: "pointer"
-};
-
-const botaoSair = {
-  marginTop: 20,
-  padding: 10,
-  width: "100%",
-  background: "#8A05BE",
-  border: "none",
-  borderRadius: 8,
-  color: "white",
-  cursor: "pointer"
-};
-
-const input = {
-  display: "block",
-  marginTop: 10,
-  padding: 10,
-  borderRadius: 8,
-  border: "none",
-  width: "100%",
-  maxWidth: 400
-};
-
-const botao = {
-  marginTop: 12,
-  padding: 12,
-  borderRadius: 10,
-  border: "none",
-  background: "#8A05BE",
-  color: "white",
-  fontWeight: "bold",
-  cursor: "pointer"
-};
-
-const card = {
-  marginTop: 10,
-  padding: 12,
-  background: "#1a1a1a",
-  borderRadius: 10
-};
