@@ -219,18 +219,35 @@ function App() {
         {lancamentos.map((l)=>(
           <div key={l.id} style={{
             background:"#1a1a1a",
-            padding:10,
+            padding:12,
             marginTop:8,
             borderRadius:10,
             display:"flex",
-            justifyContent:"space-between"
+            justifyContent:"space-between",
+            alignItems:"center"
           }}>
-            <span>
-              {l.descricao} — R$ {Number(l.valor).toFixed(2)} ({l.tipo})
-            </span>
+            <div>
+              <strong>{l.descricao}</strong><br/>
+              R$ {Number(l.valor).toFixed(2)} — {l.tipo}
+            </div>
 
-            <button onClick={()=>excluirLancamento(l.id)}>
-              ❌
+            <button
+              onClick={()=>{
+                if(window.confirm("Deseja excluir este lançamento?")){
+                  excluirLancamento(l.id);
+                }
+              }}
+              style={{
+                background:"#FF4D4D",
+                border:"none",
+                color:"white",
+                padding:"8px 14px",
+                borderRadius:8,
+                cursor:"pointer",
+                fontWeight:"bold"
+              }}
+            >
+              🗑 Excluir
             </button>
           </div>
         ))}
