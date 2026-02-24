@@ -1,72 +1,81 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Login from "./Login";
-
-const ADMIN_EMAIL = "maurojean3211@gmail.com";
+import Clientes from "./Clientes";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 function App() {
 
   const hoje = new Date();
 
+  const [mesSelecionado, setMesSelecionado] = useState(hoje.getMonth()+1);
+  const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
+
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
-  const [assinatura, setAssinatura] = useState(null);
-  const [loadingPlano, setLoadingPlano] = useState(true);
-
   const [lancamentos, setLancamentos] = useState([]);
 
-  const mesSelecionado = hoje.getMonth() + 1;
-  const anoSelecionado = hoje.getFullYear();
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+  const [tipo, setTipo] = useState("despesa");
 
   // ================= AUTH =================
   useEffect(() => {
 
     async function iniciarAuth() {
-      const { data } = await supabase.auth.getSession();
-      setUser(data.session?.user ?? null);
+
+      const { data:{ session } } =
+        await supabase.auth.getSession();
+
+      const usuario = session?.user ?? null;
+
+      setUser(usuario);
       setLoadingAuth(false);
+
+      if(usuario){
+        carregarLancamentos(usuario);
+      }
     }
 
     iniciarAuth();
 
     const { data:{ subscription } } =
-      supabase.auth.onAuthStateChange((_event, session) => {
-        setUser(session?.user ?? null);
+      supabase.auth.onAuthStateChange((_e, session)=>{
+        const usuario = session?.user ?? null;
+        setUser(usuario);
+
+        if(usuario){
+          carregarLancamentos(usuario);
+        }
       });
 
-    return () => subscription.unsubscribe();
+    return ()=>subscription.unsubscribe();
 
   }, []);
 
-  // ================= LOGOUT =================
+  useEffect(()=>{
+    if(user) carregarLancamentos(user);
+  },[mesSelecionado,anoSelecionado]);
+
   async function sair(){
     await supabase.auth.signOut();
     setUser(null);
   }
 
-  // ================= ASSINATURA =================
-  async function carregarAssinatura(usuario) {
-
-    const { data } = await supabase
-      .from("assinaturas")
-      .select("*")
-      .eq("user_id", usuario.id)
-      .single();
-
-    setAssinatura(data);
-    setLoadingPlano(false);
-  }
-
-  // ================= LANÇAMENTOS =================
-  async function carregarLancamentos() {
-
-    if (!user) return;
+  // ================= CARREGAR =================
+  async function carregarLancamentos(usuario){
 
     const { data } = await supabase
       .from("lancamentos")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", usuario.id)
       .eq("mes", mesSelecionado)
       .eq("ano", anoSelecionado)
       .order("created_at",{ascending:false});
@@ -74,14 +83,87 @@ function App() {
     setLancamentos(data || []);
   }
 
-  useEffect(() => {
-    if(user){
-      carregarLancamentos();
-      carregarAssinatura(user);
-    }
-  }, [user]);
+  // ================= ADICIONAR =================
+  async function adicionarLancamento(){
 
-  // ================= TELAS =================
+    if(!descricao || !valor){
+      alert("Preencha os campos");
+      return;
+    }
+
+    const { data:{ user } } =
+      await supabase.auth.getUser();
+
+    await supabase.from("lancamentos").insert({
+      descricao,
+      valor:Number(valor),
+      tipo,
+      data:new Date().toISOString(),
+      mes:mesSelecionado,
+      ano:anoSelecionado,
+      user_id:user.id
+    });
+
+    setDescricao("");
+    setValor("");
+
+    carregarLancamentos(user);
+  }
+
+  // ================= EXCLUIR =================
+  async function excluirLancamento(id){
+
+    await supabase
+      .from("lancamentos")
+      .delete()
+      .eq("id",id);
+
+    const { data:{ user } } =
+      await supabase.auth.getUser();
+
+    carregarLancamentos(user);
+  }
+
+  // ================= CALCULOS =================
+  const receitas = lancamentos
+    .filter(l=>l.tipo==="receita")
+    .reduce((s,l)=>s+Number(l.valor),0);
+
+  const despesas = lancamentos
+    .filter(l=>l.tipo!=="receita")
+    .reduce((s,l)=>s+Number(l.valor),0);
+
+  const saldo = receitas - despesas;
+
+  const dadosGrafico=[
+    {name:"Receitas",value:receitas},
+    {name:"Despesas",value:despesas}
+  ];
+
+  const cores=["#00C49F","#FF4D4D"];
+
+  const nomesMeses=[
+    "Jan","Fev","Mar","Abr","Mai","Jun",
+    "Jul","Ago","Set","Out","Nov","Dez"
+  ];
+
+  function mesAnterior(){
+    if(mesSelecionado===1){
+      setMesSelecionado(12);
+      setAnoSelecionado(a=>a-1);
+    }else{
+      setMesSelecionado(m=>m-1);
+    }
+  }
+
+  function proximoMes(){
+    if(mesSelecionado===12){
+      setMesSelecionado(1);
+      setAnoSelecionado(a=>a+1);
+    }else{
+      setMesSelecionado(m=>m+1);
+    }
+  }
 
   if(loadingAuth)
     return <div style={container}>Carregando...</div>;
@@ -89,60 +171,101 @@ function App() {
   if(!user)
     return <Login onLogin={(u)=>setUser(u)} />;
 
-  // 👑 ADMIN
-  if(user.email === ADMIN_EMAIL){
-    return(
-      <div style={container}>
-        <div style={app}>
-          <h2>👑 Painel Empresa</h2>
-
-          <p>Você está logado como ADMIN</p>
-
-          <button style={botao} onClick={sair}>
-            🚪 Sair
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if(loadingPlano)
-    return <div style={container}>Verificando plano...</div>;
-
-  // 🔒 BLOQUEIO
-  if(assinatura && !assinatura.ativo && !assinatura.isento){
-    return(
-      <div style={container}>
-        <div style={app}>
-          <h2>💜 Cunha Finance</h2>
-          <h3>Acesso bloqueado</h3>
-          <p>Plano mensal: R$ 100,00</p>
-
-          <button style={botao} onClick={sair}>
-            🚪 Sair
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ================= APP NORMAL =================
   return(
     <div style={container}>
       <div style={app}>
 
         <h2>💜 Cunha Finance</h2>
+        <strong>{user.email}</strong>
 
-        <h3>Bem vindo:</h3>
-        <p>{user.email}</p>
+        <button style={botao} onClick={sair}>🚪 Sair</button>
 
-        <button style={botao} onClick={sair}>
-          🚪 Sair
+        <Clientes user={user} />
+
+        {/* ================= LANÇAMENTOS ================= */}
+
+        <h3>Adicionar Lançamento</h3>
+
+        <input
+          style={botao}
+          placeholder="Descrição"
+          value={descricao}
+          onChange={(e)=>setDescricao(e.target.value)}
+        />
+
+        <input
+          style={botao}
+          type="number"
+          placeholder="Valor"
+          value={valor}
+          onChange={(e)=>setValor(e.target.value)}
+        />
+
+        <select
+          style={botao}
+          value={tipo}
+          onChange={(e)=>setTipo(e.target.value)}
+        >
+          <option value="receita">Receita</option>
+          <option value="despesa">Despesa</option>
+        </select>
+
+        <button style={botao} onClick={adicionarLancamento}>
+          ➕ Salvar Lançamento
         </button>
 
-        <h3 style={{marginTop:20}}>
-          Seus lançamentos: {lancamentos.length}
-        </h3>
+        <h3>Lançamentos</h3>
+
+        {lancamentos.map((l)=>(
+          <div key={l.id} style={{
+            background:"#1a1a1a",
+            padding:10,
+            marginTop:8,
+            borderRadius:10,
+            display:"flex",
+            justifyContent:"space-between"
+          }}>
+            <span>
+              {l.descricao} — R$ {Number(l.valor).toFixed(2)} ({l.tipo})
+            </span>
+
+            <button onClick={()=>excluirLancamento(l.id)}>
+              ❌
+            </button>
+          </div>
+        ))}
+
+        {/* ================= MES ================= */}
+
+        <div style={mesBox}>
+          <button onClick={mesAnterior}>⬅</button>
+
+          <select
+            value={mesSelecionado}
+            onChange={(e)=>setMesSelecionado(Number(e.target.value))}
+          >
+            {nomesMeses.map((m,i)=>(
+              <option key={i} value={i+1}>{m}</option>
+            ))}
+          </select>
+
+          <span>{anoSelecionado}</span>
+
+          <button onClick={proximoMes}>➡</button>
+        </div>
+
+        <h3>Saldo: R$ {saldo.toFixed(2)}</h3>
+
+        <ResponsiveContainer width="100%" height={260}>
+          <PieChart>
+            <Pie data={dadosGrafico} dataKey="value" outerRadius={90}>
+              {dadosGrafico.map((_,i)=>(
+                <Cell key={i} fill={cores[i]} />
+              ))}
+            </Pie>
+            <Tooltip/>
+          </PieChart>
+        </ResponsiveContainer>
 
       </div>
     </div>
@@ -159,11 +282,11 @@ const container={
   fontFamily:"sans-serif"
 };
 
-const app={width:"100%",maxWidth:420};
+const app={width:"100%",maxWidth:"1200px"};
 
 const botao={
-  marginTop:15,
-  padding:12,
+  marginTop:12,
+  padding:14,
   borderRadius:12,
   border:"none",
   background:"#8A05BE",
@@ -171,6 +294,14 @@ const botao={
   fontWeight:"bold",
   width:"100%",
   cursor:"pointer"
+};
+
+const mesBox={
+  display:"flex",
+  justifyContent:"space-between",
+  alignItems:"center",
+  marginTop:15,
+  gap:10
 };
 
 export default App;

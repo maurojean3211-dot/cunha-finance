@@ -17,7 +17,7 @@ export default function Login({ onLogin }) {
 
     setLoading(true);
 
-    const { data, error } =
+    const { error } =
       await supabase.auth.signInWithPassword({
         email,
         password: senha
@@ -30,7 +30,10 @@ export default function Login({ onLogin }) {
       return;
     }
 
-    onLogin(data.user);
+    const { data: { user } } =
+      await supabase.auth.getUser();
+
+    onLogin(user);
   }
 
   // ================= CRIAR CONTA =================
@@ -43,10 +46,9 @@ export default function Login({ onLogin }) {
 
     setLoading(true);
 
-    // garante que não exista sessão ativa
     await supabase.auth.signOut();
 
-    const { data, error } =
+    const { error } =
       await supabase.auth.signUp({
         email,
         password: senha,
@@ -62,59 +64,113 @@ export default function Login({ onLogin }) {
     alert("✅ Conta criada! Agora clique em Entrar.");
   }
 
+  // ================= RECUPERAR SENHA =================
+  async function recuperarSenha(){
+
+    if(!email){
+      alert("Digite seu email primeiro");
+      return;
+    }
+
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(email,{
+        redirectTo: window.location.origin + "/reset"
+      });
+
+    if(error){
+      alert("Erro ao enviar email");
+    }else{
+      alert("📧 Email de recuperação enviado!");
+    }
+  }
+
   return (
-    <div style={{
-      maxWidth:320,
-      margin:"120px auto",
-      color:"white",
-      textAlign:"center"
-    }}>
+    <div style={container}>
 
-      <h2>💜 Cunha Finance</h2>
+      <div style={box}>
 
-      <input
-        style={input}
-        placeholder="Email"
-        value={email}
-        onChange={(e)=>setEmail(e.target.value)}
-      />
+        <h2>💜 Cunha Finance</h2>
 
-      <input
-        style={input}
-        type="password"
-        placeholder="Senha"
-        value={senha}
-        onChange={(e)=>setSenha(e.target.value)}
-      />
+        <input
+          style={input}
+          placeholder="Email"
+          value={email}
+          onChange={(e)=>setEmail(e.target.value)}
+        />
 
-      <button style={botao} onClick={entrar} disabled={loading}>
-        {loading ? "Aguarde..." : "Entrar"}
-      </button>
+        <input
+          style={input}
+          type="password"
+          placeholder="Senha"
+          value={senha}
+          onChange={(e)=>setSenha(e.target.value)}
+        />
 
-      <button style={botao} onClick={cadastrar} disabled={loading}>
-        Criar Conta
-      </button>
+        <button style={botao} onClick={entrar} disabled={loading}>
+          {loading ? "Aguarde..." : "Entrar"}
+        </button>
+
+        <button style={botao} onClick={cadastrar} disabled={loading}>
+          Criar Conta
+        </button>
+
+        {/* 🔐 NOVO BOTÃO */}
+        <p
+          style={esqueci}
+          onClick={recuperarSenha}
+        >
+          🔑 Esqueci minha senha
+        </p>
+
+      </div>
 
     </div>
   );
 }
 
-const botao={
-  marginTop:10,
-  padding:12,
+// ===== ESTILO =====
+
+const container={
+  background:"#0a0a0a",
+  minHeight:"100vh",
+  display:"flex",
+  justifyContent:"center",
+  alignItems:"center",
+  color:"white",
+  fontFamily:"sans-serif"
+};
+
+const box={
   width:"100%",
-  borderRadius:8,
+  maxWidth:350,
+  textAlign:"center"
+};
+
+const botao={
+  marginTop:12,
+  padding:14,
+  width:"100%",
+  borderRadius:10,
   border:"none",
   background:"#8A05BE",
   color:"white",
   fontWeight:"bold",
-  cursor:"pointer"
+  cursor:"pointer",
+  fontSize:"15px"
 };
 
 const input={
   width:"100%",
-  padding:10,
+  padding:12,
   marginTop:10,
   borderRadius:8,
-  border:"none"
+  border:"none",
+  fontSize:"14px"
+};
+
+const esqueci={
+  marginTop:15,
+  cursor:"pointer",
+  color:"#8A05BE",
+  fontWeight:"bold"
 };

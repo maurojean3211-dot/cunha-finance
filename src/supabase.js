@@ -5,12 +5,5 @@ const supabaseKey = 'sb_publishable_0AiFHRXe64yIolMcRqcACw_hM27e_fP'
 
 export const supabase = createClient(
   supabaseUrl,
-  supabaseKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  }
+  supabaseKey
 )
