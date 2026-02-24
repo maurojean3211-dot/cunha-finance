@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+tem como voce adicionar para mim para eu copiar e colar   import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Login from "./Login";
 import Clientes from "./Clientes";
+import Admin from "./Admin";
 import {
   PieChart,
   Pie,
@@ -18,6 +19,7 @@ function App() {
   const [anoSelecionado, setAnoSelecionado] = useState(hoje.getFullYear());
 
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const [lancamentos, setLancamentos] = useState([]);
@@ -37,21 +39,24 @@ function App() {
       const usuario = session?.user ?? null;
 
       setUser(usuario);
-      setLoadingAuth(false);
 
       if(usuario){
+        await buscarRole(usuario);
         carregarLancamentos(usuario);
       }
+
+      setLoadingAuth(false);
     }
 
     iniciarAuth();
 
     const { data:{ subscription } } =
-      supabase.auth.onAuthStateChange((_e, session)=>{
+      supabase.auth.onAuthStateChange(async (_e, session)=>{
         const usuario = session?.user ?? null;
         setUser(usuario);
 
         if(usuario){
+          await buscarRole(usuario);
           carregarLancamentos(usuario);
         }
       });
@@ -60,13 +65,26 @@ function App() {
 
   }, []);
 
+  async function buscarRole(usuario){
+
+    const { data } = await supabase
+      .from("usuarios")
+      .select("role")
+      .eq("email", usuario.email)
+      .single();
+
+    setRole(data?.role || "cliente");
+  }
+
   useEffect(()=>{
-    if(user) carregarLancamentos(user);
+    if(user && role !== "admin")
+      carregarLancamentos(user);
   },[mesSelecionado,anoSelecionado]);
 
   async function sair(){
     await supabase.auth.signOut();
     setUser(null);
+    setRole(null);
   }
 
   // ================= CARREGAR =================
@@ -165,12 +183,19 @@ function App() {
     }
   }
 
+  // ================= TELAS =================
+
   if(loadingAuth)
     return <div style={container}>Carregando...</div>;
 
   if(!user)
     return <Login onLogin={(u)=>setUser(u)} />;
 
+  // 👑 ADMIN
+  if(role === "admin")
+    return <Admin user={user} sair={sair} />;
+
+  // 👤 CLIENTE
   return(
     <div style={container}>
       <div style={app}>
@@ -182,27 +207,20 @@ function App() {
 
         <Clientes user={user} />
 
-        {/* ================= LANÇAMENTOS ================= */}
-
         <h3>Adicionar Lançamento</h3>
 
-        <input
-          style={botao}
-          placeholder="Descrição"
+        <input style={botao} placeholder="Descrição"
           value={descricao}
           onChange={(e)=>setDescricao(e.target.value)}
         />
 
-        <input
-          style={botao}
-          type="number"
+        <input style={botao} type="number"
           placeholder="Valor"
           value={valor}
           onChange={(e)=>setValor(e.target.value)}
         />
 
-        <select
-          style={botao}
+        <select style={botao}
           value={tipo}
           onChange={(e)=>setTipo(e.target.value)}
         >
@@ -232,11 +250,7 @@ function App() {
             </div>
 
             <button
-              onClick={()=>{
-                if(window.confirm("Deseja excluir este lançamento?")){
-                  excluirLancamento(l.id);
-                }
-              }}
+              onClick={()=>excluirLancamento(l.id)}
               style={{
                 background:"#FF4D4D",
                 border:"none",
@@ -251,8 +265,6 @@ function App() {
             </button>
           </div>
         ))}
-
-        {/* ================= MES ================= */}
 
         <div style={mesBox}>
           <button onClick={mesAnterior}>⬅</button>
