@@ -33,13 +33,13 @@ function App() {
 
     async function iniciarAuth() {
 
-      const { data:{ session } } =
+      const { data: { session } } =
         await supabase.auth.getSession();
 
       const usuario = session?.user ?? null;
       setUser(usuario);
 
-      if(usuario){
+      if (usuario) {
         await buscarRole(usuario);
         carregarLancamentos(usuario);
       }
@@ -49,71 +49,69 @@ function App() {
 
     iniciarAuth();
 
-    const { data:{ subscription } } =
-      supabase.auth.onAuthStateChange(async (_e, session)=>{
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(async (_e, session) => {
 
         const usuario = session?.user ?? null;
         setUser(usuario);
 
-        if(usuario){
+        if (usuario) {
           await buscarRole(usuario);
           carregarLancamentos(usuario);
         }
       });
 
-    return ()=>subscription.unsubscribe();
+    return () => subscription.unsubscribe();
 
   }, []);
 
-  // ✅ BUSCAR ROLE (ADMIN - CORRIGIDO)
-  async function buscarRole(usuario){
+  // ================= BUSCAR ROLE ADMIN =================
+  async function buscarRole(usuario) {
 
     try {
 
-      const emailLogin = usuario.email?.trim().toLowerCase();
+      const email = usuario.email.trim().toLowerCase();
+      console.log("EMAIL LOGADO:", email);
 
       const { data, error } = await supabase
         .from("usuarios")
         .select("email, role");
 
-      if(error){
-        console.log("Erro role:", error);
-        setRole("cliente");
-        return;
-      }
+      console.log("USUARIOS BD:", data, error);
 
       const usuarioEncontrado = data?.find(
-        u => u.email?.trim().toLowerCase() === emailLogin
+        u => u.email?.trim().toLowerCase() === email
       );
 
       console.log("ROLE ENCONTRADA:", usuarioEncontrado);
 
-      if(usuarioEncontrado?.role === "admin"){
+      if (usuarioEncontrado?.role === "admin") {
         setRole("admin");
-      }else{
+      } else {
         setRole("cliente");
       }
 
-    } catch(err){
+    } catch (err) {
       console.log("Erro geral role:", err);
       setRole("cliente");
     }
   }
 
-  useEffect(()=>{
-    if(user && role !== "admin"){
+  // ================= TROCA MES =================
+  useEffect(() => {
+    if (user && role !== "admin") {
       carregarLancamentos(user);
     }
-  },[mesSelecionado,anoSelecionado]);
+  }, [mesSelecionado, anoSelecionado]);
 
-  async function sair(){
+  async function sair() {
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);
   }
 
   // ================= CARREGAR =================
-  async function carregarLancamentos(usuario){
+  async function carregarLancamentos(usuario) {
 
     const { data } = await supabase
       .from("lancamentos")
@@ -121,30 +119,30 @@ function App() {
       .eq("user_id", usuario.id)
       .eq("mes", mesSelecionado)
       .eq("ano", anoSelecionado)
-      .order("created_at",{ascending:false});
+      .order("created_at", { ascending: false });
 
     setLancamentos(data || []);
   }
 
   // ================= ADICIONAR =================
-  async function adicionarLancamento(){
+  async function adicionarLancamento() {
 
-    if(!descricao || !valor){
+    if (!descricao || !valor) {
       alert("Preencha os campos");
       return;
     }
 
-    const { data:{ user } } =
+    const { data: { user } } =
       await supabase.auth.getUser();
 
     await supabase.from("lancamentos").insert({
       descricao,
-      valor:Number(valor),
+      valor: Number(valor),
       tipo,
-      data:new Date().toISOString(),
-      mes:mesSelecionado,
-      ano:anoSelecionado,
-      user_id:user.id
+      data: new Date().toISOString(),
+      mes: mesSelecionado,
+      ano: anoSelecionado,
+      user_id: user.id
     });
 
     setDescricao("");
@@ -154,14 +152,14 @@ function App() {
   }
 
   // ================= EXCLUIR =================
-  async function excluirLancamento(id){
+  async function excluirLancamento(id) {
 
     await supabase
       .from("lancamentos")
       .delete()
-      .eq("id",id);
+      .eq("id", id);
 
-    const { data:{ user } } =
+    const { data: { user } } =
       await supabase.auth.getUser();
 
     carregarLancamentos(user);
@@ -169,36 +167,36 @@ function App() {
 
   // ================= CALCULOS =================
   const receitas = lancamentos
-    .filter(l=>l.tipo==="receita")
-    .reduce((s,l)=>s+Number(l.valor),0);
+    .filter(l => l.tipo === "receita")
+    .reduce((s, l) => s + Number(l.valor), 0);
 
   const despesas = lancamentos
-    .filter(l=>l.tipo!=="receita")
-    .reduce((s,l)=>s+Number(l.valor),0);
+    .filter(l => l.tipo !== "receita")
+    .reduce((s, l) => s + Number(l.valor), 0);
 
   const saldo = receitas - despesas;
 
-  const dadosGrafico=[
-    {name:"Receitas",value:receitas},
-    {name:"Despesas",value:despesas}
+  const dadosGrafico = [
+    { name: "Receitas", value: receitas },
+    { name: "Despesas", value: despesas }
   ];
 
-  const cores=["#00C49F","#FF4D4D"];
+  const cores = ["#00C49F", "#FF4D4D"];
 
   // ================= TELAS =================
 
-  if(loadingAuth)
+  if (loadingAuth)
     return <div style={container}>Carregando...</div>;
 
-  if(!user)
-    return <Login onLogin={(u)=>setUser(u)} />;
+  if (!user)
+    return <Login onLogin={(u) => setUser(u)} />;
 
   // 👑 ADMIN
-  if(role === "admin")
+  if (role === "admin")
     return <Admin user={user} sair={sair} />;
 
   // 👤 CLIENTE
-  return(
+  return (
     <div style={container}>
       <div style={app}>
 
@@ -215,7 +213,7 @@ function App() {
           style={botao}
           placeholder="Descrição"
           value={descricao}
-          onChange={(e)=>setDescricao(e.target.value)}
+          onChange={(e) => setDescricao(e.target.value)}
         />
 
         <input
@@ -223,13 +221,13 @@ function App() {
           type="number"
           placeholder="Valor"
           value={valor}
-          onChange={(e)=>setValor(e.target.value)}
+          onChange={(e) => setValor(e.target.value)}
         />
 
         <select
           style={botao}
           value={tipo}
-          onChange={(e)=>setTipo(e.target.value)}
+          onChange={(e) => setTipo(e.target.value)}
         >
           <option value="receita">Receita</option>
           <option value="despesa">Despesa</option>
@@ -244,11 +242,11 @@ function App() {
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Pie data={dadosGrafico} dataKey="value" outerRadius={90}>
-              {dadosGrafico.map((_,i)=>(
+              {dadosGrafico.map((_, i) => (
                 <Cell key={i} fill={cores[i]} />
               ))}
             </Pie>
-            <Tooltip/>
+            <Tooltip />
           </PieChart>
         </ResponsiveContainer>
 
@@ -257,28 +255,28 @@ function App() {
   );
 }
 
-const container={
-  background:"#0a0a0a",
-  minHeight:"100vh",
-  display:"flex",
-  justifyContent:"center",
-  padding:20,
-  color:"white",
-  fontFamily:"sans-serif"
+const container = {
+  background: "#0a0a0a",
+  minHeight: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  padding: 20,
+  color: "white",
+  fontFamily: "sans-serif"
 };
 
-const app={width:"100%",maxWidth:"1200px"};
+const app = { width: "100%", maxWidth: "1200px" };
 
-const botao={
-  marginTop:12,
-  padding:14,
-  borderRadius:12,
-  border:"none",
-  background:"#8A05BE",
-  color:"white",
-  fontWeight:"bold",
-  width:"100%",
-  cursor:"pointer"
+const botao = {
+  marginTop: 12,
+  padding: 14,
+  borderRadius: 12,
+  border: "none",
+  background: "#8A05BE",
+  color: "white",
+  fontWeight: "bold",
+  width: "100%",
+  cursor: "pointer"
 };
 
 export default App;
