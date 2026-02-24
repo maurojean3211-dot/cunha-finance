@@ -1,4 +1,4 @@
-tem como voce adicionar para mim para eu copiar e colar   import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 import Login from "./Login";
 import Clientes from "./Clientes";
@@ -37,7 +37,6 @@ function App() {
         await supabase.auth.getSession();
 
       const usuario = session?.user ?? null;
-
       setUser(usuario);
 
       if(usuario){
@@ -65,20 +64,28 @@ function App() {
 
   }, []);
 
+  // ✅ BUSCAR ROLE (ADMIN)
   async function buscarRole(usuario){
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("usuarios")
-      .select("role")
-      .eq("email", usuario.email)
-      .single();
+      .select("*")
+      .ilike("email", usuario.email)
+      .maybeSingle();
 
-    setRole(data?.role || "cliente");
+    console.log("ROLE:", data, error);
+
+    if(data && data.role){
+      setRole(data.role);
+    }else{
+      setRole("cliente");
+    }
   }
 
   useEffect(()=>{
-    if(user && role !== "admin")
+    if(user && role !== "admin"){
       carregarLancamentos(user);
+    }
   },[mesSelecionado,anoSelecionado]);
 
   async function sair(){
@@ -209,12 +216,14 @@ function App() {
 
         <h3>Adicionar Lançamento</h3>
 
-        <input style={botao} placeholder="Descrição"
+        <input style={botao}
+          placeholder="Descrição"
           value={descricao}
           onChange={(e)=>setDescricao(e.target.value)}
         />
 
-        <input style={botao} type="number"
+        <input style={botao}
+          type="number"
           placeholder="Valor"
           value={valor}
           onChange={(e)=>setValor(e.target.value)}
@@ -231,57 +240,6 @@ function App() {
         <button style={botao} onClick={adicionarLancamento}>
           ➕ Salvar Lançamento
         </button>
-
-        <h3>Lançamentos</h3>
-
-        {lancamentos.map((l)=>(
-          <div key={l.id} style={{
-            background:"#1a1a1a",
-            padding:12,
-            marginTop:8,
-            borderRadius:10,
-            display:"flex",
-            justifyContent:"space-between",
-            alignItems:"center"
-          }}>
-            <div>
-              <strong>{l.descricao}</strong><br/>
-              R$ {Number(l.valor).toFixed(2)} — {l.tipo}
-            </div>
-
-            <button
-              onClick={()=>excluirLancamento(l.id)}
-              style={{
-                background:"#FF4D4D",
-                border:"none",
-                color:"white",
-                padding:"8px 14px",
-                borderRadius:8,
-                cursor:"pointer",
-                fontWeight:"bold"
-              }}
-            >
-              🗑 Excluir
-            </button>
-          </div>
-        ))}
-
-        <div style={mesBox}>
-          <button onClick={mesAnterior}>⬅</button>
-
-          <select
-            value={mesSelecionado}
-            onChange={(e)=>setMesSelecionado(Number(e.target.value))}
-          >
-            {nomesMeses.map((m,i)=>(
-              <option key={i} value={i+1}>{m}</option>
-            ))}
-          </select>
-
-          <span>{anoSelecionado}</span>
-
-          <button onClick={proximoMes}>➡</button>
-        </div>
 
         <h3>Saldo: R$ {saldo.toFixed(2)}</h3>
 
@@ -323,14 +281,6 @@ const botao={
   fontWeight:"bold",
   width:"100%",
   cursor:"pointer"
-};
-
-const mesBox={
-  display:"flex",
-  justifyContent:"space-between",
-  alignItems:"center",
-  marginTop:15,
-  gap:10
 };
 
 export default App;
