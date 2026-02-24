@@ -70,17 +70,22 @@ function App() {
 
     try {
 
-      const email = usuario.email.trim().toLowerCase();
-      console.log("EMAIL LOGADO:", email);
+      const emailLogin = usuario.email.trim().toLowerCase();
+
+      console.log("EMAIL LOGADO:", emailLogin);
 
       const { data, error } = await supabase
         .from("usuarios")
         .select("email, role");
 
-      console.log("USUARIOS BD:", data, error);
+      if (error) {
+        console.log("Erro Supabase:", error);
+        setRole("cliente");
+        return;
+      }
 
       const usuarioEncontrado = data?.find(
-        u => u.email?.trim().toLowerCase() === email
+        u => u.email?.trim().toLowerCase() === emailLogin
       );
 
       console.log("ROLE ENCONTRADA:", usuarioEncontrado);
