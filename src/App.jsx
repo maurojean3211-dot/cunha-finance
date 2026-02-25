@@ -6,11 +6,10 @@ import Clientes from "./Clientes";
 import Admin from "./Admin";
 import Produtos from "./Produtos";
 import Vendas from "./Vendas";
-// ❌ Dashboard removido temporariamente (estava quebrando o React)
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [role, setRole] = useState(null);
+  const [role, setRole] = useState("cliente");
   const [pagina, setPagina] = useState("dashboard");
 
   // ==============================
@@ -18,23 +17,19 @@ export default function App() {
   // ==============================
   async function buscarRole(usuario) {
     try {
+      if (!usuario?.email) return;
+
       const emailLogin = usuario.email.trim().toLowerCase();
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("usuarios")
-        .select("*")
+        .select("role")
         .eq("email", emailLogin)
         .single();
 
-      if (error || !data) {
-        setRole("cliente");
-        return;
-      }
-
-      const roleUsuario = String(data.role || "")
+      const roleUsuario = String(data?.role || "")
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .trim()
         .toLowerCase();
 
       setRole(roleUsuario.includes("admin") ? "admin" : "cliente");
@@ -45,22 +40,27 @@ export default function App() {
   }
 
   // ==============================
-  // LOGIN SESSION
+  // SESSION LOGIN
   // ==============================
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    async function carregarSessao() {
+      const { data } = await supabase.auth.getSession();
       setSession(data.session);
+
       if (data.session?.user) {
         buscarRole(data.session.user);
       }
-    });
+    }
+
+    carregarSessao();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        buscarRole(session.user);
+    } = supabase.auth.onAuthStateChange((_event, novaSession) => {
+      setSession(novaSession);
+
+      if (novaSession?.user) {
+        buscarRole(novaSession.user);
       }
     });
 
@@ -68,23 +68,32 @@ export default function App() {
   }, []);
 
   // ==============================
-  // SE NÃO ESTIVER LOGADO
+  // NÃO LOGADO
   // ==============================
   if (!session) {
     return <Login />;
   }
 
   // ==============================
-  // LAYOUT SISTEMA
+  // LAYOUT PRINCIPAL
   // ==============================
   return (
-    <div style={{ display: "flex", background: "#020617" }}>
-      {/* MENU LATERAL */}
+    <div
+      style={{
+        display: "flex",
+        backgroundColor: "#020617",
+        color: "#ffffff",
+        minHeight: "100vh",
+        opacity: 1,
+        filter: "none",
+      }}
+    >
+      {/* ================= MENU ================= */}
       <div
         style={{
           width: 220,
-          background: "#111",
-          color: "#fff",
+          backgroundColor: "#111827",
+          color: "#ffffff",
           minHeight: "100vh",
           padding: 20,
         }}
@@ -106,28 +115,31 @@ export default function App() {
         <br /><br />
 
         {role === "admin" && (
-          <button onClick={() => setPagina("admin")}>Admin</button>
+          <>
+            <button onClick={() => setPagina("admin")}>Admin</button>
+            <br /><br />
+          </>
         )}
-
-        <br /><br />
 
         <button onClick={() => supabase.auth.signOut()}>
           Sair
         </button>
       </div>
 
-      {/* CONTEÚDO PRINCIPAL */}
+      {/* ================= CONTEÚDO ================= */}
       <div
         style={{
           flex: 1,
           padding: 20,
-          background: "#0f172a",
+          backgroundColor: "#0f172a",
           color: "#ffffff",
           minHeight: "100vh",
+          opacity: 1,
+          filter: "none",
         }}
       >
         {pagina === "dashboard" && (
-          <h1>✅ Dashboard carregado</h1>
+          <h1>📊 Dashboard Cunha Finance</h1>
         )}
 
         {pagina === "clientes" && <Clientes />}

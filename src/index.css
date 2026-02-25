@@ -1,4 +1,6 @@
-/* RESET TOTAL DO SISTEMA */
+/* =====================================================
+   RESET TOTAL DO SISTEMA — CUNHA FINANCE
+===================================================== */
 
 * {
   margin: 0;
@@ -7,41 +9,134 @@
   opacity: 1 !important;
 }
 
+/* =====================================================
+   BODY / FUNDO
+===================================================== */
+
 body {
   font-family: Arial, Helvetica, sans-serif;
   background-color: #020617;
   color: #ffffff;
+  min-height: 100vh;
 }
 
-/* INPUTS */
+/* =====================================================
+   TEXTOS GERAIS
+===================================================== */
 
-input, select {
+h1, h2, h3, h4, p, label, div, span {
+  color: #ffffff !important;
+}
+
+/* =====================================================
+   INPUTS / SELECT / TEXTAREA
+===================================================== */
+
+input,
+select,
+textarea {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border: 1px solid #334155;
+  padding: 10px;
+  border-radius: 6px;
+  outline: none;
+  font-size: 14px;
+  width: 300px;
+}
+
+/* placeholder */
+input::placeholder,
+textarea::placeholder {
+  color: #cbd5e1;
+}
+
+/* foco */
+input:focus,
+select:focus,
+textarea:focus {
+  border: 1px solid #2563eb;
+}
+
+/* opções do select */
+option {
   background: #1e293b;
   color: #ffffff;
-  border: 1px solid #334155;
-  padding: 8px;
-  border-radius: 6px;
 }
 
-/* BOTÕES */
+/* =====================================================
+   BOTÕES
+===================================================== */
 
 button {
   background: #2563eb;
   color: #ffffff;
   border: none;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: bold;
+  transition: 0.2s;
 }
 
 button:hover {
   opacity: 0.9;
+  transform: scale(1.02);
 }
 
-/* TEXTOS */
+/* botão excluir */
+button.excluir {
+  background: #dc2626;
+}
 
-h1, h2, h3, p, label, div, span {
+/* =====================================================
+   CARDS / LISTAS
+===================================================== */
+
+.card {
+  background: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #334155;
+}
+
+/* =====================================================
+   MENU LATERAL
+===================================================== */
+
+.sidebar {
+  background: #111827;
   color: #ffffff;
-  opacity: 1;
+}
+
+.sidebar button {
+  width: 100%;
+  margin-bottom: 10px;
+  background: #1f2937;
+}
+
+.sidebar button:hover {
+  background: #2563eb;
+}
+
+/* =====================================================
+   SCROLLBAR BONITA
+===================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
