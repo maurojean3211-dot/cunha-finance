@@ -1,110 +1,43 @@
-import { useState, useEffect } from "react";
-import { supabase } from "./supabase";
-import Login from "./Login";
-import Admin from "./Admin";
+async function buscarRole(usuario) {
 
-function App() {
+  try {
 
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
+    const emailLogin = usuario.email.trim().toLowerCase();
 
-  // ================= AUTH =================
-  useEffect(() => {
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("email", emailLogin)
+      .single();
 
-    async function iniciar() {
+    console.log("DADOS DO USUARIO:", data);
 
-      const { data } = await supabase.auth.getSession();
-      const usuario = data.session?.user ?? null;
-
-      setUser(usuario);
-
-      if (usuario) {
-        await buscarRole(usuario);
-      }
-
-      setLoadingAuth(false);
+    if (error || !data) {
+      console.log("Usuário não encontrado:", error);
+      setRole("cliente");
+      return;
     }
 
-    iniciar();
+    // 🔥 pega qualquer variação possível
+    const roleUsuario =
+      String(data.role || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove acentos
+        .trim()
+        .toLowerCase();
 
-    const { data: listener } =
-      supabase.auth.onAuthStateChange(async (_event, session) => {
+    console.log("ROLE NORMALIZADO:", roleUsuario);
 
-        const usuario = session?.user ?? null;
-        setUser(usuario);
-
-        if (usuario) {
-          await buscarRole(usuario);
-        } else {
-          setRole(null);
-        }
-      });
-
-    return () => listener.subscription.unsubscribe();
-
-  }, []);
-
-  // ================= BUSCAR ADMIN =================
-  async function buscarRole(usuario) {
-
-    try {
-
-      const emailLogin = usuario.email.trim().toLowerCase();
-
-      const { data, error } = await supabase
-        .from("usuarios")
-        .select("role")
-        .eq("email", emailLogin)
-        .single();
-
-      if (error || !data) {
-        console.log("Usuário não encontrado:", error);
-        setRole("cliente");
-        return;
-      }
-
-      const roleUsuario = data.role?.trim().toLowerCase();
-
-      if (roleUsuario === "administrador" || roleUsuario === "admin") {
-        setRole("admin");
-      } else {
-        setRole("cliente");
-      }
-
-    } catch (err) {
-      console.log("Erro ao buscar role:", err);
+    if (
+      roleUsuario.includes("admin")
+    ) {
+      setRole("admin");
+    } else {
       setRole("cliente");
     }
+
+  } catch (err) {
+    console.log("Erro ao buscar role:", err);
+    setRole("cliente");
   }
-
-  // ================= LOGOUT =================
-  async function sair() {
-    await supabase.auth.signOut();
-    setUser(null);
-    setRole(null);
-  }
-
-  // ================= TELAS =================
-
-  if (loadingAuth)
-    return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#0f0c29",
-        color: "white"
-      }}>
-        Carregando...
-      </div>
-    );
-
-  if (!user)
-    return <Login onLogin={(u) => setUser(u)} />;
-
-  return <Admin user={user} role={role} sair={sair} />;
 }
-
-export default App;
