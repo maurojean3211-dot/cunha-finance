@@ -27,10 +27,26 @@ export default function Vendas() {
   }
 
   async function salvarVenda() {
-    const produto = produtos.find(p => p.id === produtoId);
+    if (!clienteId || !produtoId) {
+      alert("Selecione cliente e produto");
+      return;
+    }
+
+    const produto = produtos.find((p) => p.id === produtoId);
+
+    if (!produto) {
+      alert("Produto não encontrado");
+      return;
+    }
+
+    if (produto.estoque < quantidade) {
+      alert("Estoque insuficiente!");
+      return;
+    }
 
     const valor_total = produto.preco * quantidade;
 
+    // ✅ SALVA VENDA
     const { error } = await supabase.from("vendas").insert([
       {
         cliente_id: clienteId,
@@ -43,12 +59,28 @@ export default function Vendas() {
     if (error) {
       alert("Erro ao salvar venda");
       console.log(error);
-    } else {
-      alert("Venda registrada!");
-      setClienteId("");
-      setProdutoId("");
-      setQuantidade(1);
+      return;
     }
+
+    // 🔥 ATUALIZA ESTOQUE AUTOMATICAMENTE
+    const novoEstoque = produto.estoque - quantidade;
+
+    const { error: erroEstoque } = await supabase
+      .from("produtos")
+      .update({ estoque: novoEstoque })
+      .eq("id", produtoId);
+
+    if (erroEstoque) {
+      console.log("Erro ao atualizar estoque:", erroEstoque);
+    }
+
+    alert("✅ Venda registrada e estoque atualizado!");
+
+    setClienteId("");
+    setProdutoId("");
+    setQuantidade(1);
+
+    buscarDados(); // atualiza lista
   }
 
   return (
@@ -76,7 +108,7 @@ export default function Vendas() {
         <option value="">Selecione Produto</option>
         {produtos.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.nome} - R$ {p.preco}
+            {p.nome} - R$ {p.preco} (Estoque: {p.estoque})
           </option>
         ))}
       </select>
@@ -85,6 +117,7 @@ export default function Vendas() {
 
       <input
         type="number"
+        min="1"
         value={quantidade}
         onChange={(e) => setQuantidade(Number(e.target.value))}
       />
