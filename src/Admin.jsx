@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import "./App.css";
 
-export default function Admin({ user, sair }) {
+export default function Admin({ user, role, sair }) {
 
   // ================= MENU =================
   const menuSistema = [
@@ -99,6 +99,13 @@ export default function Admin({ user, sair }) {
       {/* MENU LATERAL */}
       <div className="menu-lateral">
         <h2>💼 Cunha Finance</h2>
+
+        {/* ✅ MOSTRA STATUS ADMIN */}
+        {role === "admin" && (
+          <p style={{ color: "#4ade80", fontSize: 12 }}>
+            ✅ Administrador
+          </p>
+        )}
 
         {menuSistema.map(item => (
           <button
