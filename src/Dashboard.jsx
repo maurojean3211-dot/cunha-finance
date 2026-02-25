@@ -1,9 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function Dashboard() {
+  const [dadosGrafico, setDadosGrafico] = useState([]);
   const [totalVendas, setTotalVendas] = useState(0);
-  const [quantidadeVendas, setQuantidadeVendas] = useState(0);
 
   useEffect(() => {
     carregarDashboard();
@@ -19,46 +28,67 @@ export default function Dashboard() {
       return;
     }
 
+    // total faturamento
     const total = data.reduce(
       (acc, venda) => acc + Number(venda.valor_total),
       0
     );
 
     setTotalVendas(total);
-    setQuantidadeVendas(data.length);
+
+    // agrupar por mês
+    const meses = {};
+
+    data.forEach((venda) => {
+      const dataVenda = new Date(venda.created_at);
+      const mes = dataVenda.toLocaleString("pt-BR", {
+        month: "short",
+      });
+
+      if (!meses[mes]) {
+        meses[mes] = 0;
+      }
+
+      meses[mes] += Number(venda.valor_total);
+    });
+
+    const grafico = Object.keys(meses).map((mes) => ({
+      mes,
+      valor: meses[mes],
+    }));
+
+    setDadosGrafico(grafico);
   }
 
   return (
     <div style={{ padding: 20 }}>
       <h1>📊 Dashboard Financeiro</h1>
 
-      <div style={{
-        display: "flex",
-        gap: 20,
-        marginTop: 20
-      }}>
-        <div style={{
+      <div
+        style={{
           background: "#4CAF50",
           color: "#fff",
           padding: 20,
           borderRadius: 10,
-          width: 250
-        }}>
-          <h3>💰 Faturamento Total</h3>
-          <h2>R$ {totalVendas.toFixed(2)}</h2>
-        </div>
-
-        <div style={{
-          background: "#2196F3",
-          color: "#fff",
-          padding: 20,
-          borderRadius: 10,
-          width: 250
-        }}>
-          <h3>🛒 Quantidade de Vendas</h3>
-          <h2>{quantidadeVendas}</h2>
-        </div>
+          width: 300,
+          marginBottom: 30,
+        }}
+      >
+        <h3>💰 Faturamento Total</h3>
+        <h2>R$ {totalVendas.toFixed(2)}</h2>
       </div>
+
+      <h3>📈 Faturamento por Mês</h3>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={dadosGrafico}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="mes" />
+          <YAxis />
+          <Tooltip />
+          <Line type="monotone" dataKey="valor" stroke="#4CAF50" />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
