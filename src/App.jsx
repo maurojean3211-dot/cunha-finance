@@ -54,8 +54,8 @@ function App() {
 
       const { data, error } = await supabase
         .from("usuarios")
-        .select("papel")
-        .eq("email", emailLogin)   // ✅ coluna correta
+        .select("role")
+        .eq("email", emailLogin)
         .single();
 
       if (error || !data) {
@@ -64,16 +64,16 @@ function App() {
         return;
       }
 
-      const papelUsuario = data.papel?.trim().toLowerCase();
+      const roleUsuario = data.role?.trim().toLowerCase();
 
-      if (papelUsuario === "administrador" || papelUsuario === "admin") {
+      if (roleUsuario === "administrador" || roleUsuario === "admin") {
         setRole("admin");
       } else {
         setRole("cliente");
       }
 
     } catch (err) {
-      console.log("Erro ao buscar papel:", err);
+      console.log("Erro ao buscar role:", err);
       setRole("cliente");
     }
   }
