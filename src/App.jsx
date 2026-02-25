@@ -45,18 +45,18 @@ function App() {
 
   }, []);
 
-  // ================= BUSCAR PAPEL (ADMIN) =================
+  // ================= BUSCAR ADMIN =================
   async function buscarRole(usuario) {
 
     try {
 
       const emailLogin = usuario.email.trim().toLowerCase();
 
-      // ✅ BUSCA DIRETA (corrige problema do RLS)
+      // ✅ coluna correta "e-mail"
       const { data, error } = await supabase
         .from("usuarios")
         .select("papel")
-        .ilike("email", emailLogin)
+        .eq("e-mail", emailLogin)
         .single();
 
       if (error || !data) {
@@ -102,11 +102,9 @@ function App() {
       </div>
     );
 
-  // LOGIN
   if (!user)
     return <Login onLogin={(u) => setUser(u)} />;
 
-  // ADMIN / CLIENTE
   return <Admin user={user} role={role} sair={sair} />;
 }
 
