@@ -52,11 +52,10 @@ function App() {
 
       const emailLogin = usuario.email.trim().toLowerCase();
 
-      // ✅ coluna correta "e-mail"
       const { data, error } = await supabase
         .from("usuarios")
         .select("papel")
-        .eq("e-mail", emailLogin)
+        .eq("email", emailLogin)   // ✅ coluna correta
         .single();
 
       if (error || !data) {
