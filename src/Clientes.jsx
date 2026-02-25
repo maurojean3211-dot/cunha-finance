@@ -1,118 +1,100 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
-export default function Clientes({ user }) {
+export default function Clientes() {
+  const [clientes, setClientes] = useState([]);
+  const [nome, setNome] = useState("");
 
-  const [clientes,setClientes]=useState([]);
+  useEffect(() => {
+    buscarClientes();
+  }, []);
 
-  const [nome,setNome]=useState("");
-  const [email,setEmail]=useState("");
-  const [telefone,setTelefone]=useState("");
-  const [cpf,setCpf]=useState("");
-  const [valor,setValor]=useState("");
-  const [vencimento,setVencimento]=useState("");
-
-  useEffect(()=>{
-    carregarClientes();
-  },[]);
-
-  async function carregarClientes(){
-
+  async function buscarClientes() {
     const { data } = await supabase
       .from("clientes")
       .select("*")
-      .eq("user_id",user.id)
-      .order("created_at",{ascending:false});
+      .order("created_at", { ascending: false });
 
     setClientes(data || []);
   }
 
-  async function salvarCliente(){
-
-    if(!nome || !valor || !vencimento){
-      alert("Preencha nome, valor e vencimento");
+  async function salvarCliente() {
+    if (!nome) {
+      alert("Digite o nome");
       return;
     }
 
-    const { error } = await supabase
-      .from("clientes")
-      .insert({
-        nome,
-        email,
-        telefone,
-        cpf,
-        valor_mensal:Number(valor),
-        vencimento:Number(vencimento),
-        user_id:user.id
-      });
-
-    if(error){
-      alert(error.message);
-      return;
-    }
+    await supabase.from("clientes").insert([{ nome }]);
 
     setNome("");
-    setEmail("");
-    setTelefone("");
-    setCpf("");
-    setValor("");
-    setVencimento("");
-
-    carregarClientes();
+    buscarClientes();
   }
 
-  async function excluir(id){
-    await supabase.from("clientes").delete().eq("id",id);
-    carregarClientes();
+  // 🔥 EXCLUIR CLIENTE COM SEGURANÇA
+  async function excluirCliente(cliente) {
+    if (!confirm("Deseja excluir este cliente?")) return;
+
+    // verifica se possui vendas
+    const { data: vendas } = await supabase
+      .from("vendas")
+      .select("*")
+      .eq("cliente_id", cliente.id);
+
+    if (vendas.length > 0) {
+      alert("Não é possível excluir. Cliente possui vendas registradas.");
+      return;
+    }
+
+    await supabase
+      .from("clientes")
+      .delete()
+      .eq("id", cliente.id);
+
+    buscarClientes();
   }
 
-  return(
-    <div>
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>👥 Cadastro de Clientes</h1>
 
-      <h3>👥 Clientes</h3>
-
-      <input placeholder="Nome"
+      <input
+        placeholder="Nome do cliente"
         value={nome}
-        onChange={e=>setNome(e.target.value)} />
+        onChange={(e) => setNome(e.target.value)}
+      />
 
-      <input placeholder="Email"
-        value={email}
-        onChange={e=>setEmail(e.target.value)} />
-
-      <input placeholder="Telefone"
-        value={telefone}
-        onChange={e=>setTelefone(e.target.value)} />
-
-      <input placeholder="CPF"
-        value={cpf}
-        onChange={e=>setCpf(e.target.value)} />
-
-      <input placeholder="Valor mensal"
-        type="number"
-        value={valor}
-        onChange={e=>setValor(e.target.value)} />
-
-      <input placeholder="Dia vencimento (1-31)"
-        type="number"
-        value={vencimento}
-        onChange={e=>setVencimento(e.target.value)} />
+      <br /><br />
 
       <button onClick={salvarCliente}>
-        ➕ Salvar Cliente
+        Salvar Cliente
       </button>
 
-      {clientes.map(c=>(
-        <div key={c.id}>
-          <strong>{c.nome}</strong>
-          <p>R$ {c.valor_mensal}</p>
-          <p>Vence dia {c.vencimento}</p>
+      <hr style={{ margin: "30px 0" }} />
 
-          <button onClick={()=>excluir(c.id)}>
-            🗑 Excluir
+      <h2>Clientes cadastrados</h2>
+
+      {clientes.map((c) => (
+        <div key={c.id} style={{
+          background:"#222",
+          color:"#fff",
+          padding:10,
+          marginBottom:10,
+          borderRadius:8
+        }}>
+          {c.nome}
+
+          <button
+            style={{
+              marginLeft:20,
+              background:"red",
+              color:"#fff"
+            }}
+            onClick={() => excluirCliente(c)}
+          >
+            Excluir
           </button>
         </div>
       ))}
-
     </div>
   );
 }
