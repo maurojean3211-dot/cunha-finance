@@ -5,6 +5,7 @@ import Login from "./Login";
 import Clientes from "./Clientes";
 import Admin from "./Admin";
 import Produtos from "./Produtos";
+import Vendas from "./Vendas"; // ✅ NOVO
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -24,10 +25,7 @@ export default function App() {
         .eq("email", emailLogin)
         .single();
 
-      console.log("DADOS DO USUARIO:", data);
-
       if (error || !data) {
-        console.log("Usuário não encontrado:", error);
         setRole("cliente");
         return;
       }
@@ -37,8 +35,6 @@ export default function App() {
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
         .toLowerCase();
-
-      console.log("ROLE NORMALIZADO:", roleUsuario);
 
       if (roleUsuario.includes("admin")) {
         setRole("admin");
@@ -109,6 +105,10 @@ export default function App() {
         <button onClick={() => setPagina("produtos")}>Produtos</button>
         <br /><br />
 
+        {/* ✅ NOVO BOTÃO */}
+        <button onClick={() => setPagina("vendas")}>Vendas</button>
+        <br /><br />
+
         {role === "admin" && (
           <>
             <button onClick={() => setPagina("admin")}>Admin</button>
@@ -129,6 +129,9 @@ export default function App() {
         {pagina === "clientes" && <Clientes />}
 
         {pagina === "produtos" && <Produtos />}
+
+        {/* ✅ NOVA TELA */}
+        {pagina === "vendas" && <Vendas />}
 
         {pagina === "admin" && role === "admin" && <Admin />}
       </div>
