@@ -52,17 +52,20 @@ function App() {
 
       const emailLogin = usuario.email.trim().toLowerCase();
 
-      const { data } = await supabase
+      // ✅ BUSCA DIRETA (corrige problema do RLS)
+      const { data, error } = await supabase
         .from("usuarios")
-        .select("email, papel");
+        .select("papel")
+        .ilike("email", emailLogin)
+        .single();
 
-      const usuarioEncontrado = data?.find(
-        u => u.email?.trim().toLowerCase() === emailLogin
-      );
+      if (error || !data) {
+        console.log("Usuário não encontrado:", error);
+        setRole("cliente");
+        return;
+      }
 
-      // ✅ CORREÇÃO DEFINITIVA (aceita admin ou administrador)
-      const papelUsuario =
-        usuarioEncontrado?.papel?.trim().toLowerCase();
+      const papelUsuario = data.papel?.trim().toLowerCase();
 
       if (papelUsuario === "administrador" || papelUsuario === "admin") {
         setRole("admin");
