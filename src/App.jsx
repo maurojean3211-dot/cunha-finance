@@ -45,7 +45,7 @@ function App() {
 
   }, []);
 
-  // ================= BUSCAR ROLE =================
+  // ================= BUSCAR PAPEL (ADMIN) =================
   async function buscarRole(usuario) {
 
     try {
@@ -54,20 +54,21 @@ function App() {
 
       const { data } = await supabase
         .from("usuarios")
-        .select("email, role");
+        .select("email, papel"); // ✅ CORREÇÃO AQUI
 
       const usuarioEncontrado = data?.find(
         u => u.email?.trim().toLowerCase() === emailLogin
       );
 
-      if (usuarioEncontrado?.role === "admin") {
+      // ✅ AGORA LÊ O CAMPO CERTO
+      if (usuarioEncontrado?.papel === "admin") {
         setRole("admin");
       } else {
         setRole("cliente");
       }
 
     } catch (err) {
-      console.log("Erro ao buscar role:", err);
+      console.log("Erro ao buscar papel:", err);
       setRole("cliente");
     }
   }
@@ -100,7 +101,7 @@ function App() {
     return <Login onLogin={(u) => setUser(u)} />;
 
   // ✅ ADMIN E CLIENTE USAM A MESMA INTERFACE
-  return <Admin user={user} sair={sair} />;
+  return <Admin user={user} role={role} sair={sair} />;
 }
 
 export default App;
