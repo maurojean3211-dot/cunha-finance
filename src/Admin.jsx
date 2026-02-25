@@ -4,6 +4,10 @@ import "./App.css";
 
 export default function Admin({ user, role, sair }) {
 
+  // 🔎 DEBUG (pode deixar — ajuda a diagnosticar)
+  console.log("USUARIO:", user?.email);
+  console.log("ROLE RECEBIDO:", role);
+
   // ================= MENU =================
   const menuSistema = [
     { id: "dashboard", nome: "👑 Dashboard" },
@@ -92,6 +96,8 @@ export default function Admin({ user, role, sair }) {
 
   const saldo = receitas - despesas;
 
+  const isAdmin = role === "admin";
+
   // ================= TELA =================
   return (
     <div className="app-container">
@@ -100,12 +106,14 @@ export default function Admin({ user, role, sair }) {
       <div className="menu-lateral">
         <h2>💼 Cunha Finance</h2>
 
-        {/* ✅ MOSTRA STATUS ADMIN */}
-        {role === "admin" && (
-          <p style={{ color: "#4ade80", fontSize: 12 }}>
-            ✅ Administrador
-          </p>
-        )}
+        {/* ✅ STATUS ADMIN VISÍVEL */}
+        <p style={{
+          color: isAdmin ? "#4ade80" : "#f87171",
+          fontSize: 12,
+          fontWeight: "bold"
+        }}>
+          {isAdmin ? "✅ Administrador" : "👤 Usuário"}
+        </p>
 
         {menuSistema.map(item => (
           <button
@@ -120,7 +128,7 @@ export default function Admin({ user, role, sair }) {
 
         <hr />
 
-        <p style={{ fontSize: 12 }}>{user.email}</p>
+        <p style={{ fontSize: 12 }}>{user?.email}</p>
 
         <button
           onClick={sair}
@@ -134,7 +142,6 @@ export default function Admin({ user, role, sair }) {
       {/* CONTEÚDO */}
       <div className="conteudo">
 
-        {/* DASHBOARD */}
         {aba === "dashboard" && (
           <>
             <h1>Painel Financeiro</h1>
@@ -147,7 +154,6 @@ export default function Admin({ user, role, sair }) {
           </>
         )}
 
-        {/* FINANCEIRO */}
         {aba === "financeiro" && (
           <>
             <h2>➕ Novo Lançamento</h2>
@@ -165,10 +171,7 @@ export default function Admin({ user, role, sair }) {
               onChange={(e) => setValor(e.target.value)}
             />
 
-            <select
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-            >
+            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
               <option value="receita">Receita</option>
               <option value="despesa">Despesa</option>
             </select>
