@@ -3,56 +3,82 @@ import { supabase } from "./supabase";
 
 export default function Clientes() {
   const [clientes, setClientes] = useState([]);
+
   const [nome, setNome] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [endereco, setEndereco] = useState("");
 
   useEffect(() => {
     buscarClientes();
   }, []);
 
+  // ==============================
+  // BUSCAR CLIENTES
+  // ==============================
   async function buscarClientes() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("clientes")
       .select("*")
       .order("created_at", { ascending: false });
 
+    if (error) {
+      console.log(error);
+      return;
+    }
+
     setClientes(data || []);
   }
 
+  // ==============================
+  // SALVAR CLIENTE
+  // ==============================
   async function salvarCliente() {
-    if (!nome) {
-      alert("Digite o nome");
+    if (!nome.trim()) {
+      alert("Digite o nome do cliente");
       return;
     }
 
-    await supabase.from("clientes").insert([{ nome }]);
+    const { error } = await supabase.from("clientes").insert([
+      {
+        nome: nome.trim(),
+        cpf: cpf || null,
+        telefone: telefone || null,
+        endereco: endereco || null,
+      },
+    ]);
+
+    if (error) {
+      console.log(error);
+      alert("Erro ao salvar cliente");
+      return;
+    }
+
+    alert("✅ Cliente salvo!");
 
     setNome("");
-    buscarClientes();
-  }
-
-  // 🔥 EXCLUIR CLIENTE COM SEGURANÇA
-  async function excluirCliente(cliente) {
-    if (!confirm("Deseja excluir este cliente?")) return;
-
-    // verifica se possui vendas
-    const { data: vendas } = await supabase
-      .from("vendas")
-      .select("*")
-      .eq("cliente_id", cliente.id);
-
-    if (vendas.length > 0) {
-      alert("Não é possível excluir. Cliente possui vendas registradas.");
-      return;
-    }
-
-    await supabase
-      .from("clientes")
-      .delete()
-      .eq("id", cliente.id);
+    setCpf("");
+    setTelefone("");
+    setEndereco("");
 
     buscarClientes();
   }
 
+  // ==============================
+  // EXCLUIR CLIENTE
+  // ==============================
+  async function excluirCliente(id) {
+    const confirmar = window.confirm("Deseja excluir este cliente?");
+    if (!confirmar) return;
+
+    await supabase.from("clientes").delete().eq("id", id);
+
+    buscarClientes();
+  }
+
+  // ==============================
+  // TELA
+  // ==============================
   return (
     <div style={{ padding: 20 }}>
       <h1>👥 Cadastro de Clientes</h1>
@@ -62,34 +88,55 @@ export default function Clientes() {
         value={nome}
         onChange={(e) => setNome(e.target.value)}
       />
+      <br /><br />
 
+      <input
+        placeholder="CPF"
+        value={cpf}
+        onChange={(e) => setCpf(e.target.value)}
+      />
+      <br /><br />
+
+      <input
+        placeholder="Telefone"
+        value={telefone}
+        onChange={(e) => setTelefone(e.target.value)}
+      />
+      <br /><br />
+
+      <input
+        placeholder="Endereço"
+        value={endereco}
+        onChange={(e) => setEndereco(e.target.value)}
+      />
       <br /><br />
 
       <button onClick={salvarCliente}>
         Salvar Cliente
       </button>
 
-      <hr style={{ margin: "30px 0" }} />
+      <hr />
 
-      <h2>Clientes cadastrados</h2>
+      <h3>Clientes cadastrados</h3>
 
       {clientes.map((c) => (
-        <div key={c.id} style={{
-          background:"#222",
-          color:"#fff",
-          padding:10,
-          marginBottom:10,
-          borderRadius:8
-        }}>
-          {c.nome}
+        <div key={c.id} style={{ marginBottom: 10 }}>
+          <b>{c.nome}</b><br />
+          CPF: {c.cpf || "-"}<br />
+          Telefone: {c.telefone || "-"}<br />
+          Endereço: {c.endereco || "-"}
+          <br />
 
           <button
+            onClick={() => excluirCliente(c.id)}
             style={{
-              marginLeft:20,
-              background:"red",
-              color:"#fff"
+              marginTop: 5,
+              background: "red",
+              color: "#fff",
+              border: "none",
+              padding: "5px 10px",
+              cursor: "pointer",
             }}
-            onClick={() => excluirCliente(c)}
           >
             Excluir
           </button>
