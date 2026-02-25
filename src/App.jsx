@@ -5,7 +5,8 @@ import Login from "./Login";
 import Clientes from "./Clientes";
 import Admin from "./Admin";
 import Produtos from "./Produtos";
-import Vendas from "./Vendas"; // ✅ NOVO
+import Vendas from "./Vendas";
+import Dashboard from "./Dashboard"; // ✅ NOVO
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -105,7 +106,6 @@ export default function App() {
         <button onClick={() => setPagina("produtos")}>Produtos</button>
         <br /><br />
 
-        {/* ✅ NOVO BOTÃO */}
         <button onClick={() => setPagina("vendas")}>Vendas</button>
         <br /><br />
 
@@ -124,13 +124,12 @@ export default function App() {
 
       {/* CONTEÚDO */}
       <div style={{ flex: 1, padding: 20 }}>
-        {pagina === "dashboard" && <h1>Dashboard</h1>}
+        {pagina === "dashboard" && <Dashboard />}
 
         {pagina === "clientes" && <Clientes />}
 
         {pagina === "produtos" && <Produtos />}
 
-        {/* ✅ NOVA TELA */}
         {pagina === "vendas" && <Vendas />}
 
         {pagina === "admin" && role === "admin" && <Admin />}
