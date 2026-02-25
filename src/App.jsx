@@ -6,7 +6,7 @@ import Clientes from "./Clientes";
 import Admin from "./Admin";
 import Produtos from "./Produtos";
 import Vendas from "./Vendas";
-import Dashboard from "./Dashboard"; // ✅ NOVO
+// ❌ Dashboard removido temporariamente (estava quebrando o React)
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -37,11 +37,7 @@ export default function App() {
         .trim()
         .toLowerCase();
 
-      if (roleUsuario.includes("admin")) {
-        setRole("admin");
-      } else {
-        setRole("cliente");
-      }
+      setRole(roleUsuario.includes("admin") ? "admin" : "cliente");
     } catch (err) {
       console.log("Erro ao buscar role:", err);
       setRole("cliente");
@@ -82,7 +78,7 @@ export default function App() {
   // LAYOUT SISTEMA
   // ==============================
   return (
-    <div style={{ display: "flex" }}>
+    <div style={{ display: "flex", background: "#020617" }}>
       {/* MENU LATERAL */}
       <div
         style={{
@@ -110,9 +106,7 @@ export default function App() {
         <br /><br />
 
         {role === "admin" && (
-          <>
-            <button onClick={() => setPagina("admin")}>Admin</button>
-          </>
+          <button onClick={() => setPagina("admin")}>Admin</button>
         )}
 
         <br /><br />
@@ -122,9 +116,19 @@ export default function App() {
         </button>
       </div>
 
-      {/* CONTEÚDO */}
-      <div style={{ flex: 1, padding: 20 }}>
-        {pagina === "dashboard" && <Dashboard />}
+      {/* CONTEÚDO PRINCIPAL */}
+      <div
+        style={{
+          flex: 1,
+          padding: 20,
+          background: "#0f172a",
+          color: "#ffffff",
+          minHeight: "100vh",
+        }}
+      >
+        {pagina === "dashboard" && (
+          <h1>✅ Dashboard carregado</h1>
+        )}
 
         {pagina === "clientes" && <Clientes />}
 
