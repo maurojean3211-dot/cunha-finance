@@ -54,14 +54,17 @@ function App() {
 
       const { data } = await supabase
         .from("usuarios")
-        .select("email, papel"); // ✅ CORREÇÃO AQUI
+        .select("email, papel");
 
       const usuarioEncontrado = data?.find(
         u => u.email?.trim().toLowerCase() === emailLogin
       );
 
-      // ✅ AGORA LÊ O CAMPO CERTO
-      if (usuarioEncontrado?.papel === "admin") {
+      // ✅ CORREÇÃO DEFINITIVA (aceita admin ou administrador)
+      const papelUsuario =
+        usuarioEncontrado?.papel?.trim().toLowerCase();
+
+      if (papelUsuario === "administrador" || papelUsuario === "admin") {
         setRole("admin");
       } else {
         setRole("cliente");
@@ -100,7 +103,7 @@ function App() {
   if (!user)
     return <Login onLogin={(u) => setUser(u)} />;
 
-  // ✅ ADMIN E CLIENTE USAM A MESMA INTERFACE
+  // ADMIN / CLIENTE
   return <Admin user={user} role={role} sair={sair} />;
 }
 
