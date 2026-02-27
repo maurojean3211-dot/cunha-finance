@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+
 import {
   LineChart,
   Line,
@@ -8,101 +9,152 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 
 export default function Dashboard() {
-  const [dadosGrafico, setDadosGrafico] = useState([]);
-  const [totalVendas, setTotalVendas] = useState(0);
 
-  useEffect(() => {
+  const [dadosGrafico,setDadosGrafico]=useState([]);
+  const [faturamento,setFaturamento]=useState(0);
+  const [comissaoTotal,setComissaoTotal]=useState(0);
+  const [lucroTotal,setLucroTotal]=useState(0);
+
+  useEffect(()=>{
     carregarDashboard();
-  }, []);
+  },[]);
 
-  async function carregarDashboard() {
-    // 🔥 pega usuário logado
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+  async function carregarDashboard(){
 
-    if (userError || !user) {
-      console.log("Usuário não autenticado");
-      return;
-    }
-
-    // 🔥 busca somente vendas do usuário
-    const { data, error } = await supabase
+    const {data,error}=await supabase
       .from("vendas")
-      .select("*")
-      .eq("user_id", user.id);
+      .select("*");
 
-    if (error) {
+    if(error){
       console.log(error);
       return;
     }
 
-    // total faturamento
-    const total = data.reduce(
-      (acc, venda) => acc + Number(venda.valor_total),
-      0
-    );
+    // ======================
+    // TOTAIS
+    // ======================
+    let totalFat=0;
+    let totalCom=0;
+    let totalLuc=0;
 
-    setTotalVendas(total);
+    const meses={};
 
-    // agrupar por mês
-    const meses = {};
+    data.forEach(venda=>{
 
-    data.forEach((venda) => {
+      const valor = Number(venda.valor_total||0);
+      const comissao = Number(venda.comissao||0);
+      const lucro = Number(venda.lucro||0);
+
+      totalFat += valor;
+      totalCom += comissao;
+      totalLuc += lucro;
+
+      // AGRUPAR POR MÊS
       const dataVenda = new Date(venda.created_at);
 
-      const mes = dataVenda.toLocaleString("pt-BR", {
-        month: "short",
+      const mes = dataVenda.toLocaleString("pt-BR",{
+        month:"short"
       });
 
-      if (!meses[mes]) {
-        meses[mes] = 0;
+      if(!meses[mes]){
+        meses[mes]={
+          mes,
+          faturamento:0,
+          lucro:0
+        };
       }
 
-      meses[mes] += Number(venda.valor_total);
+      meses[mes].faturamento += valor;
+      meses[mes].lucro += lucro;
+
     });
 
-    const grafico = Object.keys(meses).map((mes) => ({
-      mes,
-      valor: meses[mes],
-    }));
+    setFaturamento(totalFat);
+    setComissaoTotal(totalCom);
+    setLucroTotal(totalLuc);
 
-    setDadosGrafico(grafico);
+    setDadosGrafico(Object.values(meses));
   }
 
-  return (
-    <div style={{ padding: 20 }}>
+  // ======================
+  return(
+    <div style={{padding:20}}>
+
       <h1>📊 Dashboard Financeiro</h1>
 
-      <div
-        style={{
-          background: "#4CAF50",
-          color: "#fff",
-          padding: 20,
-          borderRadius: 10,
-          width: 300,
-          marginBottom: 30,
-        }}
-      >
-        <h3>💰 Faturamento Total</h3>
-        <h2>R$ {totalVendas.toFixed(2)}</h2>
+      {/* CARDS */}
+      <div style={{
+        display:"flex",
+        gap:20,
+        flexWrap:"wrap",
+        marginBottom:30
+      }}>
+
+        <Card titulo="💰 Faturamento"
+              valor={faturamento} cor="#4CAF50"/>
+
+        <Card titulo="🪙 Comissão"
+              valor={comissaoTotal} cor="#FF9800"/>
+
+        <Card titulo="📈 Lucro"
+              valor={lucroTotal} cor="#2196F3"/>
+
       </div>
 
-      <h3>📈 Faturamento por Mês</h3>
+      <h3>📊 Faturamento x Lucro por Mês</h3>
 
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={350}>
         <LineChart data={dadosGrafico}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="mes" />
-          <YAxis />
-          <Tooltip />
-          <Line type="monotone" dataKey="valor" stroke="#4CAF50" />
+          <CartesianGrid strokeDasharray="3 3"/>
+          <XAxis dataKey="mes"/>
+          <YAxis/>
+          <Tooltip/>
+          <Legend/>
+
+          <Line
+            type="monotone"
+            dataKey="faturamento"
+            stroke="#4CAF50"
+            strokeWidth={3}
+          />
+
+          <Line
+            type="monotone"
+            dataKey="lucro"
+            stroke="#2196F3"
+            strokeWidth={3}
+          />
+
         </LineChart>
       </ResponsiveContainer>
+
+    </div>
+  );
+}
+
+// ======================
+// CARD COMPONENTE
+// ======================
+function Card({titulo,valor,cor}){
+
+  return(
+    <div style={{
+      background:cor,
+      color:"#fff",
+      padding:20,
+      borderRadius:12,
+      minWidth:220
+    }}>
+      <h3>{titulo}</h3>
+      <h2>
+        R$ {Number(valor).toLocaleString("pt-BR",{
+          minimumFractionDigits:2
+        })}
+      </h2>
     </div>
   );
 }
