@@ -7,12 +7,23 @@ export default function Produtos() {
   const [preco, setPreco] = useState("");
 
   // ==============================
-  // BUSCAR PRODUTOS
+  // BUSCAR PRODUTOS (SOMENTE DO USUÁRIO)
   // ==============================
   async function carregarProdutos() {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.log("Usuário não encontrado");
+      return;
+    }
+
     const { data, error } = await supabase
       .from("produtos")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -27,7 +38,7 @@ export default function Produtos() {
   }, []);
 
   // ==============================
-  // SALVAR PRODUTO
+  // SALVAR PRODUTO (COM USER_ID)
   // ==============================
   async function salvarProduto(e) {
     e.preventDefault();
@@ -37,10 +48,22 @@ export default function Produtos() {
       return;
     }
 
+    // pega usuário logado
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      alert("Usuário não autenticado");
+      return;
+    }
+
     const { error } = await supabase.from("produtos").insert([
       {
         nome: nome,
         preco: Number(preco),
+        user_id: user.id, // ⭐ dono do produto
       },
     ]);
 
@@ -50,11 +73,9 @@ export default function Produtos() {
       return;
     }
 
-    // limpa campos
     setNome("");
     setPreco("");
 
-    // atualiza lista
     await carregarProdutos();
   }
 
