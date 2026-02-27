@@ -39,42 +39,47 @@ export default function Vendas() {
   }
 
   // ==============================
-  // AO ESCOLHER PRODUTO
+  // SELECIONAR PRODUTO
   // ==============================
   function selecionarProduto(id) {
     setProdutoId(id);
 
-    const produto = produtos.find(p => p.id === id);
+    const produto = produtos.find((p) => p.id === id);
     setProdutoSelecionado(produto);
 
     setQuantidade(1);
   }
 
   // ==============================
-  // SALVAR VENDA INTELIGENTE
+  // SALVAR VENDA INTELIGENTE + COMISSÃO
   // ==============================
   async function salvarVenda() {
-
     if (!clienteId || !produtoSelecionado) {
       alert("Selecione cliente e produto");
       return;
     }
 
-    // valida estoque
-    if (Number(produtoSelecionado.estoque) < Number(quantidade)) {
+    const qtd = Number(quantidade);
+    const estoqueAtual = Number(produtoSelecionado.estoque);
+
+    if (estoqueAtual < qtd) {
       alert("Estoque insuficiente!");
       return;
     }
 
     const valor_total =
-      Number(produtoSelecionado.preco) * Number(quantidade);
+      Number(produtoSelecionado.preco) * qtd;
+
+    // ⭐ COMISSÃO AUTOMÁTICA (5 CENTAVOS)
+    const comissao = qtd * 0.05;
 
     const { error } = await supabase.from("vendas").insert([
       {
         cliente_id: clienteId,
         produto_id: produtoSelecionado.id,
-        quantidade: Number(quantidade),
+        quantidade: qtd,
         valor_total,
+        comissao,
       },
     ]);
 
@@ -84,13 +89,11 @@ export default function Vendas() {
       return;
     }
 
-    // baixa estoque
+    // atualizar estoque
     await supabase
       .from("produtos")
       .update({
-        estoque:
-          Number(produtoSelecionado.estoque) -
-          Number(quantidade),
+        estoque: estoqueAtual - qtd,
       })
       .eq("id", produtoSelecionado.id);
 
@@ -105,25 +108,25 @@ export default function Vendas() {
   }
 
   // ==============================
-  // EXCLUIR VENDA
+  // EXCLUIR VENDA (DEVOLVE ESTOQUE)
   // ==============================
   async function excluirVenda(venda) {
-
     if (!window.confirm("Excluir venda?")) return;
 
     const produto = produtos.find(
-      p => p.id === venda.produto_id
+      (p) => p.id === venda.produto_id
     );
 
-    // devolve estoque
-    await supabase
-      .from("produtos")
-      .update({
-        estoque:
-          Number(produto.estoque) +
-          Number(venda.quantidade),
-      })
-      .eq("id", produto.id);
+    if (produto) {
+      await supabase
+        .from("produtos")
+        .update({
+          estoque:
+            Number(produto.estoque) +
+            Number(venda.quantidade),
+        })
+        .eq("id", produto.id);
+    }
 
     await supabase
       .from("vendas")
@@ -146,7 +149,7 @@ export default function Vendas() {
         onChange={(e) => setClienteId(e.target.value)}
       >
         <option value="">Selecione Cliente</option>
-        {clientes.map(c => (
+        {clientes.map((c) => (
           <option key={c.id} value={c.id}>
             {c.nome}
           </option>
@@ -161,9 +164,10 @@ export default function Vendas() {
         onChange={(e) => selecionarProduto(e.target.value)}
       >
         <option value="">Selecione Produto</option>
-        {produtos.map(p => (
+        {produtos.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.nome} — R$ {p.preco} ({p.tipo_unidade}) | Estoque: {p.estoque}
+            {p.nome} — R$ {p.preco} ({p.tipo_unidade})
+            {" | "}Estoque: {p.estoque}
           </option>
         ))}
       </select>
@@ -203,24 +207,26 @@ export default function Vendas() {
 
       <h2>📋 Vendas Registradas</h2>
 
-      {vendas.map(v => (
-        <div key={v.id}
+      {vendas.map((v) => (
+        <div
+          key={v.id}
           style={{
-            background:"#222",
-            color:"#fff",
-            padding:10,
-            marginBottom:10,
-            borderRadius:8
+            background: "#222",
+            color: "#fff",
+            padding: 10,
+            marginBottom: 10,
+            borderRadius: 8,
           }}
         >
           Quantidade: {v.quantidade}
-          {" "} | Total: R$ {v.valor_total}
+          {" | "}Total: R$ {Number(v.valor_total).toFixed(2)}
+          {" | "}Comissão: R$ {Number(v.comissao || 0).toFixed(2)}
 
           <button
             style={{
-              marginLeft:20,
-              background:"red",
-              color:"#fff"
+              marginLeft: 20,
+              background: "red",
+              color: "#fff",
             }}
             onClick={() => excluirVenda(v)}
           >
