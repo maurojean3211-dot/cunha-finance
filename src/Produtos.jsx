@@ -13,7 +13,7 @@ export default function Produtos() {
     const { data, error } = await supabase
       .from("produtos")
       .select("*")
-      .order("id", { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.log("Erro ao buscar:", error);
@@ -54,8 +54,32 @@ export default function Produtos() {
     setNome("");
     setPreco("");
 
-    // 🔥 ATUALIZA LISTA (isso faltava no Vercel)
+    // atualiza lista
     await carregarProdutos();
+  }
+
+  // ==============================
+  // EXCLUIR PRODUTO
+  // ==============================
+  async function excluirProduto(id) {
+    const confirmar = window.confirm(
+      "Deseja excluir este produto?"
+    );
+
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("produtos")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.log(error);
+      alert("Erro ao excluir produto");
+      return;
+    }
+
+    carregarProdutos();
   }
 
   // ==============================
@@ -87,8 +111,31 @@ export default function Produtos() {
       <h3>Lista de Produtos</h3>
 
       {produtos.map((p) => (
-        <div key={p.id}>
-          {p.nome} - R$ {p.preco}
+        <div
+          key={p.id}
+          style={{
+            marginBottom: 10,
+            padding: 10,
+            border: "1px solid #ccc",
+            borderRadius: 6,
+          }}
+        >
+          <strong>{p.nome}</strong> — R$ {p.preco}
+
+          <button
+            onClick={() => excluirProduto(p.id)}
+            style={{
+              marginLeft: 15,
+              backgroundColor: "#ff4d4d",
+              color: "#fff",
+              border: "none",
+              padding: "5px 10px",
+              cursor: "pointer",
+              borderRadius: 4,
+            }}
+          >
+            Excluir
+          </button>
         </div>
       ))}
     </div>
