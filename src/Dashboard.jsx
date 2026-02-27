@@ -19,9 +19,22 @@ export default function Dashboard() {
   }, []);
 
   async function carregarDashboard() {
+    // 🔥 pega usuário logado
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.log("Usuário não autenticado");
+      return;
+    }
+
+    // 🔥 busca somente vendas do usuário
     const { data, error } = await supabase
       .from("vendas")
-      .select("*");
+      .select("*")
+      .eq("user_id", user.id);
 
     if (error) {
       console.log(error);
@@ -41,6 +54,7 @@ export default function Dashboard() {
 
     data.forEach((venda) => {
       const dataVenda = new Date(venda.created_at);
+
       const mes = dataVenda.toLocaleString("pt-BR", {
         month: "short",
       });
