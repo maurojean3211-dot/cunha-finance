@@ -5,48 +5,31 @@ export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
   const [nome, setNome] = useState("");
   const [preco, setPreco] = useState("");
-  const [estoque, setEstoque] = useState("");
+  const [quantidade, setQuantidade] = useState("");
   const [tipoUnidade, setTipoUnidade] = useState("UN");
-
-  const [user, setUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-
-  // ==============================
-  // CARREGAR USUÁRIO
-  // ==============================
-  useEffect(() => {
-    async function carregarUsuario() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      setUser(user);
-      setLoadingUser(false);
-    }
-
-    carregarUsuario();
-  }, []);
 
   // ==============================
   // BUSCAR PRODUTOS
   // ==============================
-  async function carregarProdutos(usuario) {
-    if (!usuario) return;
+  async function carregarProdutos() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
 
     const { data } = await supabase
       .from("produtos")
       .select("*")
-      .eq("user_id", usuario.id)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     setProdutos(data || []);
   }
 
   useEffect(() => {
-    if (!loadingUser && user) {
-      carregarProdutos(user);
-    }
-  }, [loadingUser, user]);
+    carregarProdutos();
+  }, []);
 
   // ==============================
   // SALVAR PRODUTO
@@ -54,47 +37,50 @@ export default function Produtos() {
   async function salvarProduto(e) {
     e.preventDefault();
 
-    if (!nome || !preco || estoque === "") {
+    if (!nome || !preco || !quantidade) {
       alert("Preencha todos os campos");
       return;
     }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     const { error } = await supabase.from("produtos").insert([
       {
         nome,
         preco: Number(preco),
-        estoque: Number(estoque),
+        estoque: Number(quantidade), // continua estoque no banco
         tipo_unidade: tipoUnidade,
         user_id: user.id,
       },
     ]);
 
     if (error) {
-      console.log(error);
       alert("Erro ao salvar");
       return;
     }
 
     setNome("");
     setPreco("");
-    setEstoque("");
+    setQuantidade("");
     setTipoUnidade("UN");
 
-    carregarProdutos(user);
+    carregarProdutos();
   }
 
   // ==============================
-  // EXCLUIR
+  // EXCLUIR PRODUTO
   // ==============================
   async function excluirProduto(id) {
-    if (!confirm("Deseja excluir?")) return;
+    if (!window.confirm("Excluir produto?")) return;
 
-    await supabase.from("produtos").delete().eq("id", id);
-    carregarProdutos(user);
-  }
+    await supabase
+      .from("produtos")
+      .delete()
+      .eq("id", id);
 
-  if (loadingUser) {
-    return <div style={{ padding: 20 }}>Carregando...</div>;
+    carregarProdutos();
   }
 
   // ==============================
@@ -113,18 +99,17 @@ export default function Produtos() {
 
         <input
           type="number"
-          step="0.01"
           placeholder="Preço"
           value={preco}
           onChange={(e) => setPreco(e.target.value)}
         />
 
+        {/* ⭐ AGORA É QUANTIDADE */}
         <input
           type="number"
-          step="0.01"
-          placeholder="Estoque inicial"
-          value={estoque}
-          onChange={(e) => setEstoque(e.target.value)}
+          placeholder="Quantidade inicial"
+          value={quantidade}
+          onChange={(e) => setQuantidade(e.target.value)}
         />
 
         <select
@@ -154,18 +139,18 @@ export default function Produtos() {
         >
           <strong>{p.nome}</strong> — R$ {p.preco} / {p.tipo_unidade}
           <br />
-          Estoque: {p.estoque}
+          Quantidade: {p.estoque}
 
           <button
             onClick={() => excluirProduto(p.id)}
             style={{
               marginLeft: 15,
-              background: "#ff4d4d",
+              backgroundColor: "#ff4d4d",
               color: "#fff",
               border: "none",
               padding: "5px 10px",
-              borderRadius: 4,
               cursor: "pointer",
+              borderRadius: 4,
             }}
           >
             Excluir
