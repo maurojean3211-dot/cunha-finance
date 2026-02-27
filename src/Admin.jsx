@@ -4,10 +4,6 @@ import "./App.css";
 
 export default function Admin({ user, role, sair }) {
 
-  // 🔎 DEBUG (pode deixar — ajuda a diagnosticar)
-  console.log("USUARIO:", user?.email);
-  console.log("ROLE RECEBIDO:", role);
-
   // ================= MENU =================
   const menuSistema = [
     { id: "dashboard", nome: "👑 Dashboard" },
@@ -21,6 +17,31 @@ export default function Admin({ user, role, sair }) {
 
   const [aba, setAba] = useState("dashboard");
 
+  // ================= USUARIO LOGADO =================
+  const [usuarioAtual, setUsuarioAtual] = useState(null);
+  const [empresaId, setEmpresaId] = useState(null);
+
+  useEffect(() => {
+    async function pegarUsuario() {
+      const { data } = await supabase.auth.getUser();
+
+      if (!data?.user) return;
+
+      setUsuarioAtual(data.user);
+
+      // BUSCAR EMPRESA DO USUÁRIO
+      const { data: usuarioDB } = await supabase
+        .from("usuarios")
+        .select("empresa_id")
+        .eq("id", data.user.id)
+        .single();
+
+      setEmpresaId(usuarioDB?.empresa_id);
+    }
+
+    pegarUsuario();
+  }, []);
+
   // ================= DADOS =================
   const [lancamentos, setLancamentos] = useState([]);
   const [descricao, setDescricao] = useState("");
@@ -29,15 +50,16 @@ export default function Admin({ user, role, sair }) {
 
   // ================= CARREGAR =================
   useEffect(() => {
-    if (user?.id) carregarTudo();
-  }, [user]);
+    if (empresaId) carregarTudo();
+  }, [empresaId]);
 
   async function carregarTudo() {
+
     const { data, error } = await supabase
       .from("lancamentos")
       .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .eq("empresa_id", empresaId)
+      .order("data", { ascending: false });
 
     if (error) console.log(error);
 
@@ -52,18 +74,29 @@ export default function Admin({ user, role, sair }) {
       return;
     }
 
-    const { error } = await supabase.from("lancamentos").insert({
-      descricao,
-      valor: Number(valor),
-      tipo,
-      data: new Date().toISOString(),
-      mes: new Date().getMonth() + 1,
-      ano: new Date().getFullYear(),
-      user_id: user.id
-    });
+    if (!usuarioAtual || !empresaId) {
+      alert("Sessão inválida");
+      return;
+    }
+
+    const hoje = new Date();
+
+    const { error } = await supabase.from("lancamentos").insert([
+      {
+        descricao,
+        valor: Number(valor),
+        tipo,
+        data: hoje.toISOString(),
+        mes: hoje.getMonth() + 1,
+        ano: hoje.getFullYear(),
+        usuario_id: usuarioAtual.id,
+        empresa_id: empresaId,
+      },
+    ]);
 
     if (error) {
-      alert("Erro ao salvar");
+      console.log(error);
+      alert(error.message);
       return;
     }
 
@@ -80,7 +113,7 @@ export default function Admin({ user, role, sair }) {
       .from("lancamentos")
       .delete()
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("empresa_id", empresaId);
 
     carregarTudo();
   }
@@ -102,11 +135,9 @@ export default function Admin({ user, role, sair }) {
   return (
     <div className="app-container">
 
-      {/* MENU LATERAL */}
       <div className="menu-lateral">
         <h2>💼 Cunha Finance</h2>
 
-        {/* ✅ STATUS ADMIN VISÍVEL */}
         <p style={{
           color: isAdmin ? "#4ade80" : "#f87171",
           fontSize: 12,
@@ -128,7 +159,7 @@ export default function Admin({ user, role, sair }) {
 
         <hr />
 
-        <p style={{ fontSize: 12 }}>{user?.email}</p>
+        <p style={{ fontSize: 12 }}>{usuarioAtual?.email}</p>
 
         <button
           onClick={sair}
@@ -139,13 +170,11 @@ export default function Admin({ user, role, sair }) {
         </button>
       </div>
 
-      {/* CONTEÚDO */}
       <div className="conteudo">
 
         {aba === "dashboard" && (
           <>
             <h1>Painel Financeiro</h1>
-
             <div className="resumo-box">
               <p>💰 Receitas: R$ {receitas.toFixed(2)}</p>
               <p>💸 Despesas: R$ {despesas.toFixed(2)}</p>
@@ -207,7 +236,6 @@ export default function Admin({ user, role, sair }) {
         {aba === "vendas" && <h2>🛒 Vendas (em construção)</h2>}
         {aba === "compras" && <h2>🧾 Compras (em construção)</h2>}
         {aba === "despesas" && <h2>💸 Despesas (em construção)</h2>}
-
       </div>
     </div>
   );
