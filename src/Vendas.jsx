@@ -60,10 +60,10 @@ export default function Vendas() {
     }
 
     const qtd = Number(quantidade);
-    const estoqueAtual = Number(produtoSelecionado.estoque);
+    const quantidadeAtual = Number(produtoSelecionado.estoque);
 
-    if (estoqueAtual < qtd) {
-      alert("Estoque insuficiente!");
+    if (quantidadeAtual < qtd) {
+      alert("Quantidade insuficiente!");
       return;
     }
 
@@ -73,7 +73,7 @@ export default function Vendas() {
     // comissão fixa (R$0,05)
     const comissao = qtd * 0.05;
 
-    // ⭐ LUCRO AUTOMÁTICO
+    // lucro automático
     const lucro = valor_total - comissao;
 
     const { error } = await supabase.from("vendas").insert([
@@ -93,11 +93,11 @@ export default function Vendas() {
       return;
     }
 
-    // atualizar estoque
+    // atualizar quantidade (estoque interno)
     await supabase
       .from("produtos")
       .update({
-        estoque: estoqueAtual - qtd,
+        estoque: quantidadeAtual - qtd,
       })
       .eq("id", produtoSelecionado.id);
 
@@ -171,7 +171,7 @@ export default function Vendas() {
         {produtos.map((p) => (
           <option key={p.id} value={p.id}>
             {p.nome} — R$ {p.preco} ({p.tipo_unidade})
-            {" | "}Estoque: {p.estoque}
+            {" | "}Quantidade: {p.estoque}
           </option>
         ))}
       </select>
