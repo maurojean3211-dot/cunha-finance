@@ -51,7 +51,7 @@ export default function Vendas() {
   }
 
   // ==============================
-  // SALVAR VENDA INTELIGENTE + COMISSÃO
+  // SALVAR VENDA (COMISSÃO + LUCRO)
   // ==============================
   async function salvarVenda() {
     if (!clienteId || !produtoSelecionado) {
@@ -70,8 +70,11 @@ export default function Vendas() {
     const valor_total =
       Number(produtoSelecionado.preco) * qtd;
 
-    // ⭐ COMISSÃO AUTOMÁTICA (5 CENTAVOS)
+    // comissão fixa (R$0,05)
     const comissao = qtd * 0.05;
+
+    // ⭐ LUCRO AUTOMÁTICO
+    const lucro = valor_total - comissao;
 
     const { error } = await supabase.from("vendas").insert([
       {
@@ -80,6 +83,7 @@ export default function Vendas() {
         quantidade: qtd,
         valor_total,
         comissao,
+        lucro,
       },
     ]);
 
@@ -108,7 +112,7 @@ export default function Vendas() {
   }
 
   // ==============================
-  // EXCLUIR VENDA (DEVOLVE ESTOQUE)
+  // EXCLUIR VENDA
   // ==============================
   async function excluirVenda(venda) {
     if (!window.confirm("Excluir venda?")) return;
@@ -221,6 +225,7 @@ export default function Vendas() {
           Quantidade: {v.quantidade}
           {" | "}Total: R$ {Number(v.valor_total).toFixed(2)}
           {" | "}Comissão: R$ {Number(v.comissao || 0).toFixed(2)}
+          {" | "}Lucro: R$ {Number(v.lucro || 0).toFixed(2)}
 
           <button
             style={{
