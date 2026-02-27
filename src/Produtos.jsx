@@ -5,65 +5,67 @@ export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
   const [nome, setNome] = useState("");
   const [preco, setPreco] = useState("");
+  const [estoque, setEstoque] = useState("");
+  const [tipoUnidade, setTipoUnidade] = useState("UN");
+
+  const [user, setUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   // ==============================
-  // BUSCAR PRODUTOS (SOMENTE DO USUÁRIO)
+  // CARREGAR USUÁRIO
   // ==============================
-  async function carregarProdutos() {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      console.log("Usuário não encontrado");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("produtos")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log("Erro ao buscar:", error);
-    } else {
-      setProdutos(data);
-    }
-  }
-
   useEffect(() => {
-    carregarProdutos();
+    async function carregarUsuario() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUser(user);
+      setLoadingUser(false);
+    }
+
+    carregarUsuario();
   }, []);
 
   // ==============================
-  // SALVAR PRODUTO (COM USER_ID)
+  // BUSCAR PRODUTOS
+  // ==============================
+  async function carregarProdutos(usuario) {
+    if (!usuario) return;
+
+    const { data } = await supabase
+      .from("produtos")
+      .select("*")
+      .eq("user_id", usuario.id)
+      .order("created_at", { ascending: false });
+
+    setProdutos(data || []);
+  }
+
+  useEffect(() => {
+    if (!loadingUser && user) {
+      carregarProdutos(user);
+    }
+  }, [loadingUser, user]);
+
+  // ==============================
+  // SALVAR PRODUTO
   // ==============================
   async function salvarProduto(e) {
     e.preventDefault();
 
-    if (!nome || !preco) {
+    if (!nome || !preco || estoque === "") {
       alert("Preencha todos os campos");
-      return;
-    }
-
-    // pega usuário logado
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      alert("Usuário não autenticado");
       return;
     }
 
     const { error } = await supabase.from("produtos").insert([
       {
-        nome: nome,
+        nome,
         preco: Number(preco),
-        user_id: user.id, // ⭐ dono do produto
+        estoque: Number(estoque),
+        tipo_unidade: tipoUnidade,
+        user_id: user.id,
       },
     ]);
 
@@ -75,32 +77,24 @@ export default function Produtos() {
 
     setNome("");
     setPreco("");
+    setEstoque("");
+    setTipoUnidade("UN");
 
-    await carregarProdutos();
+    carregarProdutos(user);
   }
 
   // ==============================
-  // EXCLUIR PRODUTO
+  // EXCLUIR
   // ==============================
   async function excluirProduto(id) {
-    const confirmar = window.confirm(
-      "Deseja excluir este produto?"
-    );
+    if (!confirm("Deseja excluir?")) return;
 
-    if (!confirmar) return;
+    await supabase.from("produtos").delete().eq("id", id);
+    carregarProdutos(user);
+  }
 
-    const { error } = await supabase
-      .from("produtos")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.log(error);
-      alert("Erro ao excluir produto");
-      return;
-    }
-
-    carregarProdutos();
+  if (loadingUser) {
+    return <div style={{ padding: 20 }}>Carregando...</div>;
   }
 
   // ==============================
@@ -108,7 +102,7 @@ export default function Produtos() {
   // ==============================
   return (
     <div style={{ padding: 20 }}>
-      <h2>Produtos - Cunha Finance</h2>
+      <h2>📦 Produtos - Cunha Finance</h2>
 
       <form onSubmit={salvarProduto}>
         <input
@@ -118,11 +112,28 @@ export default function Produtos() {
         />
 
         <input
-          placeholder="Preço"
           type="number"
+          step="0.01"
+          placeholder="Preço"
           value={preco}
           onChange={(e) => setPreco(e.target.value)}
         />
+
+        <input
+          type="number"
+          step="0.01"
+          placeholder="Estoque inicial"
+          value={estoque}
+          onChange={(e) => setEstoque(e.target.value)}
+        />
+
+        <select
+          value={tipoUnidade}
+          onChange={(e) => setTipoUnidade(e.target.value)}
+        >
+          <option value="UN">Peça (UN)</option>
+          <option value="KG">Peso (KG)</option>
+        </select>
 
         <button type="submit">Salvar</button>
       </form>
@@ -141,18 +152,20 @@ export default function Produtos() {
             borderRadius: 6,
           }}
         >
-          <strong>{p.nome}</strong> — R$ {p.preco}
+          <strong>{p.nome}</strong> — R$ {p.preco} / {p.tipo_unidade}
+          <br />
+          Estoque: {p.estoque}
 
           <button
             onClick={() => excluirProduto(p.id)}
             style={{
               marginLeft: 15,
-              backgroundColor: "#ff4d4d",
+              background: "#ff4d4d",
               color: "#fff",
               border: "none",
               padding: "5px 10px",
-              cursor: "pointer",
               borderRadius: 4,
+              cursor: "pointer",
             }}
           >
             Excluir

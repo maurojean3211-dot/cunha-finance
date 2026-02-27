@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
 
 import Login from "./Login";
+import Dashboard from "./Dashboard";
 import Clientes from "./Clientes";
 import Produtos from "./Produtos";
 import Vendas from "./Vendas";
@@ -9,245 +10,131 @@ import Admin from "./Admin";
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [role, setRole] = useState(null);
-  const [loadingRole, setLoadingRole] = useState(true);
+  const [loadingSession, setLoadingSession] = useState(true);
   const [pagina, setPagina] = useState("dashboard");
 
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [receita, setReceita] = useState(false);
-
-  // ================================
-  // BUSCAR ROLE
-  // ================================
-  async function buscarRole(usuario) {
-    try {
-      if (!usuario?.email) {
-        setRole("cliente");
-        setLoadingRole(false);
-        return;
-      }
-
-      const emailLogin = usuario.email.trim();
-
-      console.log("EMAIL LOGIN:", emailLogin);
-
-      const { data } = await supabase
-        .from("usuarios")
-        .select("role,email")
-        .ilike("email", emailLogin)
-        .maybeSingle();
-
-      console.log("USUARIO ENCONTRADO:", data);
-
-      if (!data) {
-        setRole("cliente");
-      } else {
-        const roleUsuario = String(data.role || "")
-          .trim()
-          .toLowerCase();
-
-        setRole(roleUsuario === "admin" ? "admin" : "cliente");
-      }
-    } catch (err) {
-      console.log(err);
-      setRole("cliente");
-    }
-
-    setLoadingRole(false);
-  }
-
-  // ================================
-  // SESSION LOGIN
-  // ================================
+  // =============================
+  // CONTROLE DE SESSÃO (FIX)
+  // =============================
   useEffect(() => {
-    async function iniciar() {
+    async function carregarSessao() {
       const { data } = await supabase.auth.getSession();
 
       setSession(data.session);
-
-      if (data.session?.user) {
-        await buscarRole(data.session.user);
-      } else {
-        setLoadingRole(false);
-      }
+      setLoadingSession(false);
     }
 
-    iniciar();
+    carregarSessao();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-
-      if (session?.user) {
-        setLoadingRole(true);
-        await buscarRole(session.user);
-      } else {
-        setRole(null);
-        setLoadingRole(false);
-      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // ================================
-  // SALVAR LANÇAMENTO
-  // ================================
-  async function salvarLancamento() {
-    if (!descricao || !valor) {
-      alert("Preencha os campos");
-      return;
-    }
-
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData?.user;
-
-    if (!user) {
-      alert("Usuário não identificado.");
-      return;
-    }
-
-    const { data: usuarioDB } = await supabase
-      .from("usuarios")
-      .select("empresa_id")
-      .ilike("email", user.email)
-      .single();
-
-    const { error } = await supabase.from("lancamentos").insert([
-      {
-        descricao,
-        valor: Number(valor),
-        tipo: receita ? "receita" : "despesa",
-        usuario_id: user.id,
-        empresa_id: usuarioDB?.empresa_id,
-      },
-    ]);
-
-    if (error) {
-      console.log(error);
-      alert(error.message);
-      return;
-    }
-
-    alert("✅ Lançamento salvo!");
-
-    setDescricao("");
-    setValor("");
-    setReceita(false);
-  }
-
-  // ================================
-  // NÃO LOGADO (🔥 CORREÇÃO DO onLogin)
-  // ================================
-  if (!session)
-    return <Login onLogin={() => window.location.reload()} />;
-
-  // ================================
-  // AGUARDAR ROLE
-  // ================================
-  if (loadingRole) {
+  // =============================
+  // LOADING GLOBAL
+  // =============================
+  if (loadingSession) {
     return (
-      <div style={{ color: "#fff", padding: 40 }}>
-        Carregando usuário...
+      <div style={{ padding: 40, color: "#fff" }}>
+        Carregando sistema...
       </div>
     );
   }
 
-  // ================================
+  // =============================
+  // NÃO LOGADO
+  // =============================
+  if (!session) {
+    return <Login />;
+  }
+
+  // =============================
+  // RENDER PÁGINAS
+  // =============================
+  function renderPagina() {
+    switch (pagina) {
+      case "clientes":
+        return <Clientes />;
+      case "produtos":
+        return <Produtos />;
+      case "vendas":
+        return <Vendas />;
+      case "admin":
+        return <Admin />;
+      default:
+        return <Dashboard />;
+    }
+  }
+
+  // =============================
   // LAYOUT
-  // ================================
+  // =============================
   return (
-    <div style={{ display: "flex", background: "#020617" }}>
+    <div style={{ display: "flex", height: "100vh" }}>
       {/* MENU */}
       <div
         style={{
           width: 220,
           background: "#111827",
           color: "#fff",
-          minHeight: "100vh",
           padding: 20,
         }}
       >
         <h2>Cunha Finance</h2>
 
-        <p>✅ {role === "admin" ? "Administrador" : "Usuário"}</p>
+        <Menu texto="Dashboard" acao={() => setPagina("dashboard")} />
+        <Menu texto="Clientes" acao={() => setPagina("clientes")} />
+        <Menu texto="Produtos" acao={() => setPagina("produtos")} />
+        <Menu texto="Vendas" acao={() => setPagina("vendas")} />
+        <Menu texto="Admin" acao={() => setPagina("admin")} />
 
-        <button onClick={() => setPagina("dashboard")}>Dashboard</button>
-        <br /><br />
+        <hr />
 
-        <button onClick={() => setPagina("financeiro")}>Financeiro</button>
-        <br /><br />
-
-        <button onClick={() => setPagina("clientes")}>Clientes</button>
-        <br /><br />
-
-        <button onClick={() => setPagina("produtos")}>Produtos</button>
-        <br /><br />
-
-        <button onClick={() => setPagina("vendas")}>Vendas</button>
-        <br /><br />
-
-        {role === "admin" && (
-          <>
-            <button onClick={() => setPagina("admin")}>Admin</button>
-            <br /><br />
-          </>
-        )}
-
-        <button onClick={() => supabase.auth.signOut()}>
-          Sair
-        </button>
+        <Menu
+          texto="Sair"
+          acao={() => supabase.auth.signOut()}
+        />
       </div>
 
       {/* CONTEÚDO */}
-      <div style={{ flex: 1, padding: 20 }}>
-        {pagina === "dashboard" && (
-          <h1>📊 Bem-vindo ao Cunha Finance</h1>
-        )}
-
-        {pagina === "financeiro" && (
-          <>
-            <h2>➕ Novo Lançamento</h2>
-
-            <input
-              placeholder="Descrição"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-            />
-            <br /><br />
-
-            <input
-              type="number"
-              placeholder="Valor"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-            />
-            <br /><br />
-
-            <label>
-              <input
-                type="checkbox"
-                checked={receita}
-                onChange={(e) => setReceita(e.target.checked)}
-              />
-              Receita
-            </label>
-
-            <br /><br />
-
-            <button onClick={salvarLancamento}>
-              Salvar Lançamento
-            </button>
-          </>
-        )}
-
-        {pagina === "clientes" && <Clientes />}
-        {pagina === "produtos" && <Produtos />}
-        {pagina === "vendas" && <Vendas />}
-        {pagina === "admin" && role === "admin" && <Admin />}
+      <div
+        style={{
+          flex: 1,
+          padding: 25,
+          background: "#020617",
+          color: "#fff",
+          overflow: "auto",
+        }}
+      >
+        {renderPagina()}
       </div>
+    </div>
+  );
+}
+
+function Menu({ texto, acao }) {
+  return (
+    <div
+      onClick={acao}
+      style={{
+        padding: 10,
+        cursor: "pointer",
+        marginTop: 10,
+        borderRadius: 6,
+      }}
+      onMouseEnter={(e) =>
+        (e.target.style.background = "#1f2937")
+      }
+      onMouseLeave={(e) =>
+        (e.target.style.background = "transparent")
+      }
+    >
+      {texto}
     </div>
   );
 }
