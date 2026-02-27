@@ -2,161 +2,121 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
 export default function Produtos() {
-  const [produtos, setProdutos] = useState([]);
-  const [nome, setNome] = useState("");
-  const [preco, setPreco] = useState("");
-  const [quantidade, setQuantidade] = useState("");
-  const [tipoUnidade, setTipoUnidade] = useState("UN");
 
-  // ==============================
-  // BUSCAR PRODUTOS
-  // ==============================
-  async function carregarProdutos() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const [produtos,setProdutos]=useState([]);
+  const [nome,setNome]=useState("");
 
-    if (!user) return;
+  useEffect(()=>{
+    carregarProdutos();
+  },[]);
 
-    const { data } = await supabase
+  // =============================
+  async function carregarProdutos(){
+
+    const { data, error } = await supabase
       .from("produtos")
       .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+      .order("created_at",{ascending:false});
 
-    setProdutos(data || []);
+    if(!error){
+      setProdutos(data || []);
+    }
   }
 
-  useEffect(() => {
-    carregarProdutos();
-  }, []);
-
-  // ==============================
-  // SALVAR PRODUTO
-  // ==============================
-  async function salvarProduto(e) {
+  // =============================
+  async function salvarProduto(e){
     e.preventDefault();
 
-    if (!nome || !preco || !quantidade) {
-      alert("Preencha todos os campos");
+    if(!nome){
+      alert("Digite o nome do produto");
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("produtos")
+      .insert([{ nome }]);
 
-    const { error } = await supabase.from("produtos").insert([
-      {
-        nome,
-        preco: Number(preco),
-        estoque: Number(quantidade), // continua estoque no banco
-        tipo_unidade: tipoUnidade,
-        user_id: user.id,
-      },
-    ]);
-
-    if (error) {
+    if(error){
       alert("Erro ao salvar");
       return;
     }
 
     setNome("");
-    setPreco("");
-    setQuantidade("");
-    setTipoUnidade("UN");
-
     carregarProdutos();
   }
 
-  // ==============================
-  // EXCLUIR PRODUTO
-  // ==============================
-  async function excluirProduto(id) {
-    if (!window.confirm("Excluir produto?")) return;
+  // =============================
+  async function excluirProduto(id){
+
+    if(!window.confirm("Excluir produto?")) return;
 
     await supabase
       .from("produtos")
       .delete()
-      .eq("id", id);
+      .eq("id",id);
 
     carregarProdutos();
   }
 
-  // ==============================
-  // TELA
-  // ==============================
-  return (
-    <div style={{ padding: 20 }}>
-      <h2>📦 Produtos - Cunha Finance</h2>
+  // =============================
+  return(
+    <div style={{padding:20}}>
+
+      <h1>📦 Cadastro de Produtos</h1>
 
       <form onSubmit={salvarProduto}>
+
         <input
           placeholder="Nome do produto"
           value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          onChange={e=>setNome(e.target.value)}
+          style={{
+            padding:10,
+            width:300,
+            marginRight:10
+          }}
         />
 
-        <input
-          type="number"
-          placeholder="Preço"
-          value={preco}
-          onChange={(e) => setPreco(e.target.value)}
-        />
+        <button type="submit">
+          Salvar
+        </button>
 
-        {/* ⭐ AGORA É QUANTIDADE */}
-        <input
-          type="number"
-          placeholder="Quantidade inicial"
-          value={quantidade}
-          onChange={(e) => setQuantidade(e.target.value)}
-        />
-
-        <select
-          value={tipoUnidade}
-          onChange={(e) => setTipoUnidade(e.target.value)}
-        >
-          <option value="UN">Peça (UN)</option>
-          <option value="KG">Peso (KG)</option>
-        </select>
-
-        <button type="submit">Salvar</button>
       </form>
 
-      <hr />
+      <hr/>
 
-      <h3>Lista de Produtos</h3>
+      <h3>Produtos cadastrados</h3>
 
-      {produtos.map((p) => (
-        <div
-          key={p.id}
+      {produtos.map(p=>(
+        <div key={p.id}
           style={{
-            marginBottom: 10,
-            padding: 10,
-            border: "1px solid #ccc",
-            borderRadius: 6,
+            background:"#222",
+            color:"#fff",
+            padding:12,
+            marginBottom:10,
+            borderRadius:8
           }}
         >
-          <strong>{p.nome}</strong> — R$ {p.preco} / {p.tipo_unidade}
-          <br />
-          Quantidade: {p.estoque}
+          {p.nome}
 
           <button
-            onClick={() => excluirProduto(p.id)}
+            onClick={()=>excluirProduto(p.id)}
             style={{
-              marginLeft: 15,
-              backgroundColor: "#ff4d4d",
-              color: "#fff",
-              border: "none",
-              padding: "5px 10px",
-              cursor: "pointer",
-              borderRadius: 4,
+              marginLeft:20,
+              background:"red",
+              color:"#fff",
+              border:"none",
+              padding:"5px 10px",
+              borderRadius:6,
+              cursor:"pointer"
             }}
           >
             Excluir
           </button>
+
         </div>
       ))}
+
     </div>
   );
 }
