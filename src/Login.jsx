@@ -33,7 +33,12 @@ export default function Login({ onLogin }) {
     const { data: { user } } =
       await supabase.auth.getUser();
 
-    onLogin(user);
+    // ✅ CORREÇÃO DEFINITIVA
+    if (typeof onLogin === "function") {
+      onLogin(user);
+    } else {
+      window.location.reload();
+    }
   }
 
   // ================= CRIAR CONTA =================
@@ -114,7 +119,6 @@ export default function Login({ onLogin }) {
           Criar Conta
         </button>
 
-        {/* 🔐 NOVO BOTÃO */}
         <p
           style={esqueci}
           onClick={recuperarSenha}
