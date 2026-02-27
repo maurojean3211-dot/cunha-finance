@@ -10,34 +10,27 @@ export default function Vendas() {
   const [produtoId, setProdutoId] = useState("");
   const [quantidade, setQuantidade] = useState(1);
 
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
+
   useEffect(() => {
     buscarDados();
   }, []);
 
   // ==============================
-  // BUSCAR DADOS DO USUÁRIO LOGADO
+  // BUSCAR DADOS
   // ==============================
   async function buscarDados() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
-
     const { data: clientesData } = await supabase
       .from("clientes")
-      .select("*")
-      .eq("user_id", user.id);
+      .select("*");
 
     const { data: produtosData } = await supabase
       .from("produtos")
-      .select("*")
-      .eq("user_id", user.id);
+      .select("*");
 
     const { data: vendasData } = await supabase
       .from("vendas")
       .select("*")
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     setClientes(clientesData || []);
@@ -46,39 +39,42 @@ export default function Vendas() {
   }
 
   // ==============================
-  // SALVAR VENDA (COM USER_ID)
+  // AO ESCOLHER PRODUTO
+  // ==============================
+  function selecionarProduto(id) {
+    setProdutoId(id);
+
+    const produto = produtos.find(p => p.id === id);
+    setProdutoSelecionado(produto);
+
+    setQuantidade(1);
+  }
+
+  // ==============================
+  // SALVAR VENDA INTELIGENTE
   // ==============================
   async function salvarVenda() {
-    if (!clienteId || !produtoId) {
+
+    if (!clienteId || !produtoSelecionado) {
       alert("Selecione cliente e produto");
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      alert("Usuário não autenticado");
-      return;
-    }
-
-    const produto = produtos.find((p) => p.id === produtoId);
-
-    if (produto.estoque < quantidade) {
+    // valida estoque
+    if (Number(produtoSelecionado.estoque) < Number(quantidade)) {
       alert("Estoque insuficiente!");
       return;
     }
 
-    const valor_total = produto.preco * quantidade;
+    const valor_total =
+      Number(produtoSelecionado.preco) * Number(quantidade);
 
     const { error } = await supabase.from("vendas").insert([
       {
         cliente_id: clienteId,
-        produto_id: produtoId,
-        quantidade,
+        produto_id: produtoSelecionado.id,
+        quantidade: Number(quantidade),
         valor_total,
-        user_id: user.id, // ⭐ DONO DA VENDA
       },
     ]);
 
@@ -91,37 +87,44 @@ export default function Vendas() {
     // baixa estoque
     await supabase
       .from("produtos")
-      .update({ estoque: produto.estoque - quantidade })
-      .eq("id", produtoId);
+      .update({
+        estoque:
+          Number(produtoSelecionado.estoque) -
+          Number(quantidade),
+      })
+      .eq("id", produtoSelecionado.id);
 
-    alert("Venda registrada!");
+    alert("✅ Venda registrada!");
 
     setClienteId("");
     setProdutoId("");
+    setProdutoSelecionado(null);
     setQuantidade(1);
 
     buscarDados();
   }
 
   // ==============================
-  // EXCLUIR VENDA + DEVOLVER ESTOQUE
+  // EXCLUIR VENDA
   // ==============================
   async function excluirVenda(venda) {
-    if (!confirm("Excluir esta venda?")) return;
+
+    if (!window.confirm("Excluir venda?")) return;
 
     const produto = produtos.find(
-      (p) => p.id === venda.produto_id
+      p => p.id === venda.produto_id
     );
 
     // devolve estoque
     await supabase
       .from("produtos")
       .update({
-        estoque: produto.estoque + venda.quantidade,
+        estoque:
+          Number(produto.estoque) +
+          Number(venda.quantidade),
       })
-      .eq("id", venda.produto_id);
+      .eq("id", produto.id);
 
-    // remove venda
     await supabase
       .from("vendas")
       .delete()
@@ -137,12 +140,13 @@ export default function Vendas() {
     <div style={{ padding: 20 }}>
       <h1>🛒 Registrar Venda</h1>
 
+      {/* CLIENTE */}
       <select
         value={clienteId}
         onChange={(e) => setClienteId(e.target.value)}
       >
         <option value="">Selecione Cliente</option>
-        {clientes.map((c) => (
+        {clientes.map(c => (
           <option key={c.id} value={c.id}>
             {c.nome}
           </option>
@@ -151,28 +155,43 @@ export default function Vendas() {
 
       <br /><br />
 
+      {/* PRODUTO */}
       <select
         value={produtoId}
-        onChange={(e) => setProdutoId(e.target.value)}
+        onChange={(e) => selecionarProduto(e.target.value)}
       >
         <option value="">Selecione Produto</option>
-        {produtos.map((p) => (
+        {produtos.map(p => (
           <option key={p.id} value={p.id}>
-            {p.nome} - R$ {p.preco} (Estoque: {p.estoque})
+            {p.nome} — R$ {p.preco} ({p.tipo_unidade}) | Estoque: {p.estoque}
           </option>
         ))}
       </select>
 
       <br /><br />
 
-      <input
-        type="number"
-        min="1"
-        value={quantidade}
-        onChange={(e) =>
-          setQuantidade(Number(e.target.value))
-        }
-      />
+      {/* QUANTIDADE INTELIGENTE */}
+      {produtoSelecionado && (
+        <>
+          <input
+            type="number"
+            step={
+              produtoSelecionado.tipo_unidade === "KG"
+                ? "0.001"
+                : "1"
+            }
+            min="0"
+            value={quantidade}
+            onChange={(e) =>
+              setQuantidade(e.target.value)
+            }
+          />
+
+          <span style={{ marginLeft: 10 }}>
+            {produtoSelecionado.tipo_unidade}
+          </span>
+        </>
+      )}
 
       <br /><br />
 
@@ -184,24 +203,24 @@ export default function Vendas() {
 
       <h2>📋 Vendas Registradas</h2>
 
-      {vendas.map((v) => (
-        <div
-          key={v.id}
+      {vendas.map(v => (
+        <div key={v.id}
           style={{
-            background: "#222",
-            color: "#fff",
-            padding: 10,
-            marginBottom: 10,
-            borderRadius: 8,
+            background:"#222",
+            color:"#fff",
+            padding:10,
+            marginBottom:10,
+            borderRadius:8
           }}
         >
-          Quantidade: {v.quantidade} | Total: R$ {v.valor_total}
+          Quantidade: {v.quantidade}
+          {" "} | Total: R$ {v.valor_total}
 
           <button
             style={{
-              marginLeft: 20,
-              background: "red",
-              color: "#fff",
+              marginLeft:20,
+              background:"red",
+              color:"#fff"
             }}
             onClick={() => excluirVenda(v)}
           >
