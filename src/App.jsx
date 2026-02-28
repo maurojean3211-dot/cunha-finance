@@ -6,20 +6,23 @@ import Dashboard from "./Dashboard";
 import Clientes from "./Clientes";
 import Produtos from "./Produtos";
 import Vendas from "./Vendas";
+import Fornecedores from "./Fornecedores";
+import Compras from "./Compras";
 import Admin from "./Admin";
 
 export default function App() {
+
   const [session, setSession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [pagina, setPagina] = useState("dashboard");
 
   // =============================
-  // CONTROLE DE SESSÃO (FIX)
+  // SESSÃO
   // =============================
   useEffect(() => {
+
     async function carregarSessao() {
       const { data } = await supabase.auth.getSession();
-
       setSession(data.session);
       setLoadingSession(false);
     }
@@ -33,41 +36,61 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
+
   }, []);
 
   // =============================
-  // LOADING GLOBAL
+  // LOADING
   // =============================
   if (loadingSession) {
-    return (
-      <div style={{ padding: 40, color: "#fff" }}>
-        Carregando sistema...
-      </div>
-    );
+    return <div style={{ padding: 40 }}>Carregando sistema...</div>;
   }
 
   // =============================
-  // NÃO LOGADO
+  // LOGIN
   // =============================
   if (!session) {
     return <Login />;
   }
 
   // =============================
-  // RENDER PÁGINAS
+  // RENDER PÁGINAS (COM PROTEÇÃO)
   // =============================
   function renderPagina() {
-    switch (pagina) {
-      case "clientes":
-        return <Clientes />;
-      case "produtos":
-        return <Produtos />;
-      case "vendas":
-        return <Vendas />;
-      case "admin":
-        return <Admin />;
-      default:
-        return <Dashboard />;
+    try {
+
+      switch (pagina) {
+        case "clientes":
+          return <Clientes />;
+
+        case "produtos":
+          return <Produtos />;
+
+        case "fornecedores":
+          return <Fornecedores />;
+
+        case "compras":
+          return <Compras />;
+
+        case "vendas":
+          return <Vendas />;
+
+        case "admin":
+          return <Admin />;
+
+        default:
+          return <Dashboard />;
+      }
+
+    } catch (erro) {
+      console.error("Erro ao renderizar página:", erro);
+
+      return (
+        <div>
+          <h2>Erro ao abrir página</h2>
+          <p>Veja o console (F12)</p>
+        </div>
+      );
     }
   }
 
@@ -76,6 +99,7 @@ export default function App() {
   // =============================
   return (
     <div style={{ display: "flex", height: "100vh" }}>
+
       {/* MENU */}
       <div
         style={{
@@ -87,16 +111,18 @@ export default function App() {
       >
         <h2>Cunha Finance</h2>
 
-        <Menu texto="Dashboard" acao={() => setPagina("dashboard")} />
-        <Menu texto="Clientes" acao={() => setPagina("clientes")} />
-        <Menu texto="Produtos" acao={() => setPagina("produtos")} />
-        <Menu texto="Vendas" acao={() => setPagina("vendas")} />
-        <Menu texto="Admin" acao={() => setPagina("admin")} />
+        <Menu texto="📊 Dashboard" acao={() => setPagina("dashboard")} />
+        <Menu texto="👥 Clientes" acao={() => setPagina("clientes")} />
+        <Menu texto="📦 Produtos" acao={() => setPagina("produtos")} />
+        <Menu texto="🏭 Fornecedores" acao={() => setPagina("fornecedores")} />
+        <Menu texto="♻️ Compras" acao={() => setPagina("compras")} />
+        <Menu texto="🛒 Vendas" acao={() => setPagina("vendas")} />
+        <Menu texto="⚙️ Admin" acao={() => setPagina("admin")} />
 
-        <hr />
+        <hr style={{ marginTop: 20 }} />
 
         <Menu
-          texto="Sair"
+          texto="🚪 Sair"
           acao={() => supabase.auth.signOut()}
         />
       </div>
@@ -113,10 +139,14 @@ export default function App() {
       >
         {renderPagina()}
       </div>
+
     </div>
   );
 }
 
+// =============================
+// MENU
+// =============================
 function Menu({ texto, acao }) {
   return (
     <div
@@ -128,10 +158,10 @@ function Menu({ texto, acao }) {
         borderRadius: 6,
       }}
       onMouseEnter={(e) =>
-        (e.target.style.background = "#1f2937")
+        (e.currentTarget.style.background = "#1f2937")
       }
       onMouseLeave={(e) =>
-        (e.target.style.background = "transparent")
+        (e.currentTarget.style.background = "transparent")
       }
     >
       {texto}
