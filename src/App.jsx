@@ -6,8 +6,6 @@ import Dashboard from "./Dashboard";
 import Clientes from "./Clientes";
 import Produtos from "./Produtos";
 import Vendas from "./Vendas";
-
-// ✅ CAMINHOS CORRIGIDOS
 import Fornecedores from "./src/src/Fornecedores";
 import Compras from "./src/src/Compras";
 import Admin from "./src/src/Admin";
@@ -56,7 +54,7 @@ export default function App() {
   }
 
   // =============================
-  // RENDER PÁGINAS
+  // PÁGINAS
   // =============================
   function renderPagina() {
 
@@ -84,9 +82,6 @@ export default function App() {
     }
   }
 
-  // =============================
-  // LAYOUT
-  // =============================
   return (
     <div style={{ display: "flex", height: "100vh" }}>
 
@@ -111,10 +106,7 @@ export default function App() {
 
         <hr style={{ marginTop: 20 }} />
 
-        <Menu
-          texto="🚪 Sair"
-          acao={() => supabase.auth.signOut()}
-        />
+        <Menu texto="🚪 Sair" acao={() => supabase.auth.signOut()} />
       </div>
 
       {/* CONTEÚDO */}
@@ -134,9 +126,6 @@ export default function App() {
   );
 }
 
-// =============================
-// MENU
-// =============================
 function Menu({ texto, acao }) {
   return (
     <div
