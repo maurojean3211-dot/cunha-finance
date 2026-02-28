@@ -6,9 +6,11 @@ import Dashboard from "./Dashboard";
 import Clientes from "./Clientes";
 import Produtos from "./Produtos";
 import Vendas from "./Vendas";
-import Fornecedores from "./Fornecedores";
-import Compras from "./Compras";
-import Admin from "./Admin";
+
+// ✅ CAMINHOS CORRIGIDOS
+import Fornecedores from "./src/src/Fornecedores";
+import Compras from "./src/src/Compras";
+import Admin from "./src/src/Admin";
 
 export default function App() {
 
@@ -54,43 +56,31 @@ export default function App() {
   }
 
   // =============================
-  // RENDER PÁGINAS (COM PROTEÇÃO)
+  // RENDER PÁGINAS
   // =============================
   function renderPagina() {
-    try {
 
-      switch (pagina) {
-        case "clientes":
-          return <Clientes />;
+    switch (pagina) {
+      case "clientes":
+        return <Clientes />;
 
-        case "produtos":
-          return <Produtos />;
+      case "produtos":
+        return <Produtos />;
 
-        case "fornecedores":
-          return <Fornecedores />;
+      case "fornecedores":
+        return <Fornecedores />;
 
-        case "compras":
-          return <Compras />;
+      case "compras":
+        return <Compras />;
 
-        case "vendas":
-          return <Vendas />;
+      case "vendas":
+        return <Vendas />;
 
-        case "admin":
-          return <Admin />;
+      case "admin":
+        return <Admin />;
 
-        default:
-          return <Dashboard />;
-      }
-
-    } catch (erro) {
-      console.error("Erro ao renderizar página:", erro);
-
-      return (
-        <div>
-          <h2>Erro ao abrir página</h2>
-          <p>Veja o console (F12)</p>
-        </div>
-      );
+      default:
+        return <Dashboard />;
     }
   }
 
