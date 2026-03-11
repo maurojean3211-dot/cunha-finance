@@ -5,6 +5,8 @@ export default function Login({ onLogin }) {
 
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [loading, setLoading] = useState(false);
 
   // ================= LOGIN =================
@@ -33,7 +35,6 @@ export default function Login({ onLogin }) {
     const { data: { user } } =
       await supabase.auth.getUser();
 
-    // ✅ CORREÇÃO DEFINITIVA
     if (typeof onLogin === "function") {
       onLogin(user);
     } else {
@@ -44,8 +45,8 @@ export default function Login({ onLogin }) {
   // ================= CRIAR CONTA =================
   async function cadastrar() {
 
-    if (!email || !senha) {
-      alert("Preencha email e senha");
+    if (!email || !senha || !cpf || !whatsapp) {
+      alert("Preencha email, senha, CPF e WhatsApp");
       return;
     }
 
@@ -53,18 +54,40 @@ export default function Login({ onLogin }) {
 
     await supabase.auth.signOut();
 
-    const { error } =
+    const { data, error } =
       await supabase.auth.signUp({
         email,
         password: senha,
       });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       alert(error.message);
       return;
     }
+
+    // 🔹 CRIAR EMPRESA AUTOMATICAMENTE
+    if (data?.user) {
+
+      await supabase
+        .from("empresas")
+        .insert([
+          {
+            user_id: data.user.id,
+            name: email,
+            email: email,
+            cpf: cpf,
+            whatsapp: whatsapp,
+            plano: "Básico",
+            status: "Ativo",
+            tipo: "Empresa",
+            tipo_sistema: "financeiro"
+          }
+        ]);
+
+    }
+
+    setLoading(false);
 
     alert("✅ Conta criada! Agora clique em Entrar.");
   }
@@ -109,6 +132,20 @@ export default function Login({ onLogin }) {
           placeholder="Senha"
           value={senha}
           onChange={(e)=>setSenha(e.target.value)}
+        />
+
+        <input
+          style={input}
+          placeholder="CPF"
+          value={cpf}
+          onChange={(e)=>setCpf(e.target.value)}
+        />
+
+        <input
+          style={input}
+          placeholder="WhatsApp"
+          value={whatsapp}
+          onChange={(e)=>setWhatsapp(e.target.value)}
         />
 
         <button style={botao} onClick={entrar} disabled={loading}>

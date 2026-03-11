@@ -1,105 +1,141 @@
-/* ===== RESET ===== */
-body {
-  margin: 0;
-  background: #0f0c29;
-  font-family: sans-serif;
-  color: #ffffff;
+/* ===== GERAL ===== */
+
+body{
+margin:0;
+background:#020617;
+color:white;
+font-family:Arial, Helvetica, sans-serif;
+overflow-y:auto;
 }
 
-/* ===== CONTAINER PRINCIPAL ===== */
-.app-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg,#0f0c29,#302b63,#24243e);
-  color: #ffffff;
-  display: flex;
+/* ===== LAYOUT ===== */
+
+.app-container{
+display:flex;
+min-height:100vh;
+position:relative;
 }
 
-/* ===== MENU ===== */
-.menu-lateral {
-  width: 240px;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(12px);
-  padding: 20px;
-  border-right: 1px solid rgba(255,255,255,0.08);
+/* ===== MENU LATERAL ===== */
+
+.menu-lateral{
+width:220px;
+background:#020617;
+border-right:1px solid #1e293b;
+padding:20px;
+
+position:sticky;
+top:0;
+height:100vh;
+
+overflow-y:auto;
+display:flex;
+flex-direction:column;
+}
+
+/* ===== BOTÕES DO MENU ===== */
+
+.menu-lateral button{
+width:100%;
+margin-bottom:10px;
+}
+
+/* ===== BOTÃO SAIR ===== */
+
+.botao-sair{
+margin-top:20px;
+background:#ef4444;
 }
 
 /* ===== CONTEÚDO ===== */
-.conteudo {
-  flex: 1;
-  padding: 30px;
-  color: #ffffff;
+
+.conteudo{
+flex:1;
+padding:30px;
+min-height:100vh;
+overflow-y:auto;
 }
 
-/* ===== INPUTS ===== */
-input,
-select,
-textarea {
-  background: rgba(255,255,255,0.08);
-  color: #ffffff !important;
-  border: 1px solid rgba(255,255,255,0.15);
-  outline: none;
-  padding: 12px;
-  border-radius: 8px;
-  margin-top: 10px;
-  width: 100%;
-  max-width: 420px;
+/* ===== INPUT ===== */
+
+input{
+display:block;
+width:420px;
+max-width:100%;
+padding:12px;
+margin-bottom:12px;
+
+background:#111827;
+color:white;
+
+border:1px solid #475569;
+border-radius:6px;
+
+font-size:16px;
 }
 
-/* TEXTO DIGITADO */
-input,
-textarea,
-select {
-  caret-color: #ffffff;
+/* ===== SELECT ===== */
+
+select{
+display:block;
+width:420px;
+max-width:100%;
+padding:12px;
+margin-bottom:12px;
+
+background:#111827;
+color:white;
+
+border:1px solid #475569;
+border-radius:6px;
+
+font-size:16px;
+cursor:pointer;
 }
 
-/* PLACEHOLDER */
-input::placeholder,
-textarea::placeholder {
-  color: rgba(255,255,255,0.6);
-}
+/* ===== OPTIONS ===== */
 
-/* OPTIONS DO SELECT */
-option {
-  color: #000000;
+select option{
+background:#ffffff;
+color:#000000;
 }
 
 /* ===== BOTÕES ===== */
-button {
-  cursor: pointer;
-  border: none;
-  border-radius: 10px;
-  padding: 12px 18px;
-  font-weight: bold;
-  background: #6366f1;
-  color: #ffffff;
+
+button{
+padding:12px 20px;
+border-radius:6px;
+border:none;
+
+background:#3b82f6;
+color:white;
+
+cursor:pointer;
+font-weight:bold;
 }
 
-button:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-  transition: 0.2s;
+button:hover{
+opacity:0.9;
 }
 
-/* ===== CARDS (PRODUTOS) ===== */
-.card {
-  margin-top: 12px;
-  padding: 15px;
-  background: rgba(255,255,255,0.07);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  color: #ffffff !important;
+/* ===== DIVISÃO ===== */
+
+hr{
+border:1px solid #334155;
+margin:30px 0;
 }
 
-/* FORÇA TEXTO VISÍVEL DENTRO DOS CARDS */
-.card * {
-  color: #ffffff !important;
+/* ===== SCROLL BONITO ===== */
+
+::-webkit-scrollbar{
+width:8px;
 }
 
-/* ===== RESUMO ===== */
-.resumo-box {
-  margin-top: 20px;
-  padding: 20px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 12px;
-  color: #ffffff;
+::-webkit-scrollbar-track{
+background:#020617;
+}
+
+::-webkit-scrollbar-thumb{
+background:#334155;
+border-radius:4px;
 }

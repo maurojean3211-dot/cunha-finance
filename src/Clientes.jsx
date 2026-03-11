@@ -2,28 +2,45 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
 export default function Clientes() {
-  const [clientes, setClientes] = useState([]);
 
+  const [clientes, setClientes] = useState([]);
   const [nome, setNome] = useState("");
-  const [cpf, setCpf] = useState("");
   const [telefone, setTelefone] = useState("");
-  const [endereco, setEndereco] = useState("");
+  const [empresaId, setEmpresaId] = useState(null);
 
   useEffect(() => {
-    buscarClientes();
+    iniciar();
   }, []);
 
-  async function buscarClientes() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  async function iniciar() {
 
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .select("empresa_id")
+      .eq("id", user.id)
+      .single();
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    if (data?.empresa_id) {
+      setEmpresaId(data.empresa_id);
+      carregarClientes(data.empresa_id);
+    }
+
+  }
+
+  async function carregarClientes(empId) {
 
     const { data, error } = await supabase
       .from("clientes")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("empresa_id", empId)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -34,128 +51,148 @@ export default function Clientes() {
     setClientes(data || []);
   }
 
-  async function salvarCliente() {
-    if (!nome) {
+  async function salvarCliente(){
+
+    if(!empresaId){
+      alert("Empresa ainda não carregou");
+      return;
+    }
+
+    if(!nome){
       alert("Digite o nome do cliente");
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data, error } = await supabase
+      .from("clientes")
+      .insert([
+        {
+          nome: nome.trim(),
+          telefone: telefone,
+          empresa_id: empresaId
+        }
+      ])
+      .select();
 
-    const { error } = await supabase.from("clientes").insert([
-      {
-        nome,
-        cpf,
-        telefone,
-        endereco,
-        user_id: user.id,
-      },
-    ]);
-
-    if (error) {
+    if(error){
       console.log(error);
       alert("Erro ao salvar cliente");
       return;
     }
 
-    setNome("");
-    setCpf("");
-    setTelefone("");
-    setEndereco("");
+    // adiciona cliente na lista imediatamente
+    setClientes(prev => [data[0], ...prev]);
 
-    buscarClientes();
+    setNome("");
+    setTelefone("");
+
   }
 
   async function excluirCliente(id) {
-    await supabase.from("clientes").delete().eq("id", id);
-    buscarClientes();
+
+    if (!window.confirm("Excluir cliente?")) return;
+
+    const { error } = await supabase
+      .from("clientes")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.log(error);
+      alert("Erro ao excluir");
+      return;
+    }
+
+    // remove da lista sem precisar buscar novamente
+    setClientes(prev => prev.filter(c => c.id !== id));
+
   }
 
   return (
-    <div style={{ padding: 20, color: "#fff" }}>
-      <h1>👥 Cadastro de Clientes</h1>
+    <div style={{ padding: 20, color:"#fff" }}>
+
+      <h1>👥 Clientes</h1>
 
       <input
-        style={{ padding: 8, width: 300 }}
         placeholder="Nome do cliente"
         value={nome}
-        onChange={(e) => setNome(e.target.value)}
+        onChange={(e)=>setNome(e.target.value)}
+        style={inputStyle}
       />
-      <br /><br />
 
       <input
-        style={{ padding: 8, width: 300 }}
-        placeholder="CPF"
-        value={cpf}
-        onChange={(e) => setCpf(e.target.value)}
-      />
-      <br /><br />
-
-      <input
-        style={{ padding: 8, width: 300 }}
         placeholder="Telefone"
         value={telefone}
-        onChange={(e) => setTelefone(e.target.value)}
+        onChange={(e)=>setTelefone(e.target.value)}
+        style={inputStyle}
       />
-      <br /><br />
-
-      <input
-        style={{ padding: 8, width: 300 }}
-        placeholder="Endereço"
-        value={endereco}
-        onChange={(e) => setEndereco(e.target.value)}
-      />
-      <br /><br />
 
       <button
+        type="button"
         onClick={salvarCliente}
-        style={{
-          padding: 10,
-          background: "#22c55e",
-          color: "#fff",
-          border: "none",
-          cursor: "pointer",
-        }}
+        style={buttonStyle}
       >
         Salvar Cliente
       </button>
 
       <hr />
 
-      <h3>Clientes cadastrados</h3>
+      {clientes.map(c => (
+        <div key={c.id} style={cardStyle}>
 
-      {clientes.map((c) => (
-        <div
-          key={c.id}
-          style={{
-            marginBottom: 12,
-            padding: 12,
-            background: "#1f2937",
-            borderRadius: 8,
-          }}
-        >
-          <b>{c.nome}</b><br />
-          CPF: {c.cpf || "-"}<br />
-          Telefone: {c.telefone || "-"}<br />
-          Endereço: {c.endereco || "-"}<br />
+          <div>
+            <strong>{c.nome}</strong>
+            <br />
+            {c.telefone}
+          </div>
 
           <button
-            onClick={() => excluirCliente(c.id)}
-            style={{
-              marginTop: 8,
-              background: "red",
-              color: "#fff",
-              border: "none",
-              padding: "6px 12px",
-              cursor: "pointer",
-            }}
+            onClick={()=>excluirCliente(c.id)}
+            style={deleteStyle}
           >
             Excluir
           </button>
+
         </div>
       ))}
+
     </div>
   );
 }
+
+const inputStyle = {
+  display:"block",
+  marginBottom:10,
+  padding:8,
+  width:"100%",
+  borderRadius:6,
+  border:"none"
+};
+
+const buttonStyle = {
+  padding:10,
+  borderRadius:6,
+  border:"none",
+  background:"#2563eb",
+  color:"#fff",
+  cursor:"pointer"
+};
+
+const deleteStyle = {
+  padding:6,
+  borderRadius:6,
+  border:"none",
+  background:"#dc2626",
+  color:"#fff",
+  cursor:"pointer"
+};
+
+const cardStyle = {
+  background:"#1f2937",
+  padding:10,
+  borderRadius:6,
+  marginBottom:10,
+  display:"flex",
+  justifyContent:"space-between",
+  alignItems:"center"
+};

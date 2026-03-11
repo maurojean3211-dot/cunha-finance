@@ -1,160 +1,253 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
-
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
+PieChart,
+Pie,
+Cell,
+Tooltip,
+Legend,
+LineChart,
+Line,
+XAxis,
+YAxis,
+CartesianGrid
 } from "recharts";
 
-export default function Dashboard() {
+export default function Dashboard(){
 
-  const [dadosGrafico,setDadosGrafico]=useState([]);
-  const [faturamento,setFaturamento]=useState(0);
-  const [comissaoTotal,setComissaoTotal]=useState(0);
-  const [lucroTotal,setLucroTotal]=useState(0);
+const [lancamentos,setLancamentos] = useState([]);
+const [receitas,setReceitas] = useState(0);
+const [despesas,setDespesas] = useState(0);
+const [saldo,setSaldo] = useState(0);
 
-  useEffect(()=>{
-    carregarDashboard();
-  },[]);
+const [dadosGrafico,setDadosGrafico] = useState([]);
+const [dadosMes,setDadosMes] = useState([]);
 
-  async function carregarDashboard(){
+const [empresaId,setEmpresaId] = useState(null);
 
-    const {data,error}=await supabase
-      .from("vendas")
-      .select("*");
+useEffect(()=>{
+iniciar();
+},[]);
 
-    if(error){
-      console.log(error);
-      return;
-    }
+async function iniciar(){
 
-    // ======================
-    // TOTAIS
-    // ======================
-    let totalFat=0;
-    let totalCom=0;
-    let totalLuc=0;
+const { data:{ user } } = await supabase.auth.getUser();
+if(!user) return;
 
-    const meses={};
+// buscar empresa do usuário
+const { data:usuario } = await supabase
+.from("usuarios")
+.select("empresa_id")
+.eq("email",user.email)
+.single();
 
-    data.forEach(venda=>{
+if(!usuario?.empresa_id) return;
 
-      const valor = Number(venda.valor_total||0);
-      const comissao = Number(venda.comissao||0);
-      const lucro = Number(venda.lucro||0);
+setEmpresaId(usuario.empresa_id);
 
-      totalFat += valor;
-      totalCom += comissao;
-      totalLuc += lucro;
+await carregarDados(usuario.empresa_id);
 
-      // AGRUPAR POR MÊS
-      const dataVenda = new Date(venda.created_at);
-
-      const mes = dataVenda.toLocaleString("pt-BR",{
-        month:"short"
-      });
-
-      if(!meses[mes]){
-        meses[mes]={
-          mes,
-          faturamento:0,
-          lucro:0
-        };
-      }
-
-      meses[mes].faturamento += valor;
-      meses[mes].lucro += lucro;
-
-    });
-
-    setFaturamento(totalFat);
-    setComissaoTotal(totalCom);
-    setLucroTotal(totalLuc);
-
-    setDadosGrafico(Object.values(meses));
-  }
-
-  // ======================
-  return(
-    <div style={{padding:20}}>
-
-      <h1>📊 Dashboard Financeiro</h1>
-
-      {/* CARDS */}
-      <div style={{
-        display:"flex",
-        gap:20,
-        flexWrap:"wrap",
-        marginBottom:30
-      }}>
-
-        <Card titulo="💰 Faturamento"
-              valor={faturamento} cor="#4CAF50"/>
-
-        <Card titulo="🪙 Comissão"
-              valor={comissaoTotal} cor="#FF9800"/>
-
-        <Card titulo="📈 Lucro"
-              valor={lucroTotal} cor="#2196F3"/>
-
-      </div>
-
-      <h3>📊 Faturamento x Lucro por Mês</h3>
-
-      <ResponsiveContainer width="100%" height={350}>
-        <LineChart data={dadosGrafico}>
-          <CartesianGrid strokeDasharray="3 3"/>
-          <XAxis dataKey="mes"/>
-          <YAxis/>
-          <Tooltip/>
-          <Legend/>
-
-          <Line
-            type="monotone"
-            dataKey="faturamento"
-            stroke="#4CAF50"
-            strokeWidth={3}
-          />
-
-          <Line
-            type="monotone"
-            dataKey="lucro"
-            stroke="#2196F3"
-            strokeWidth={3}
-          />
-
-        </LineChart>
-      </ResponsiveContainer>
-
-    </div>
-  );
 }
 
-// ======================
-// CARD COMPONENTE
-// ======================
-function Card({titulo,valor,cor}){
+async function carregarDados(empresa_id){
 
-  return(
-    <div style={{
-      background:cor,
-      color:"#fff",
-      padding:20,
-      borderRadius:12,
-      minWidth:220
-    }}>
-      <h3>{titulo}</h3>
-      <h2>
-        R$ {Number(valor).toLocaleString("pt-BR",{
-          minimumFractionDigits:2
-        })}
-      </h2>
-    </div>
-  );
+const {data,error} = await supabase
+.from("lancamentos")
+.select("*")
+.eq("empresa_id",empresa_id);
+
+if(error){
+console.log(error);
+return;
+}
+
+setLancamentos(data || []);
+calcularDados(data || []);
+
+}
+
+function calcularDados(lista){
+
+let totalReceita=0;
+let totalDespesa=0;
+
+lista.forEach(l=>{
+
+const tipo = String(l.tipo || "").toLowerCase();
+const valor = Number(l.valor || 0);
+
+if(tipo==="receita"){
+totalReceita += valor;
+}
+
+if(tipo==="despesa"){
+totalDespesa += valor;
+}
+
+});
+
+setReceitas(totalReceita);
+setDespesas(totalDespesa);
+setSaldo(totalReceita-totalDespesa);
+
+setDadosGrafico([
+{ name:"Receitas", value:totalReceita },
+{ name:"Despesas", value:totalDespesa }
+]);
+
+// ===== GRÁFICO MENSAL =====
+
+const meses={};
+
+lista.forEach(l=>{
+
+let mes = Number(l.mes);
+
+if(!mes && l.data_lancamento){
+mes = new Date(l.data_lancamento).getMonth()+1;
+}
+
+if(!mes) return;
+
+if(!meses[mes]){
+meses[mes]=0;
+}
+
+const tipo = String(l.tipo || "").toLowerCase();
+const valor = Number(l.valor || 0);
+
+if(tipo==="receita"){
+meses[mes]+=valor;
+}
+
+if(tipo==="despesa"){
+meses[mes]-=valor;
+}
+
+});
+
+const nomesMes=[
+"Jan","Fev","Mar","Abr","Mai","Jun",
+"Jul","Ago","Set","Out","Nov","Dez"
+];
+
+const dadosLinha = Object.keys(meses).map(m=>({
+mes: nomesMes[m-1],
+valor: meses[m]
+}));
+
+setDadosMes(dadosLinha);
+
+}
+
+const cores=["#22c55e","#ef4444"];
+
+return(
+
+<div style={{padding:30,color:"#fff"}}>
+
+<h1>📊 Dashboard Financeiro</h1>
+
+<div style={{
+display:"grid",
+gridTemplateColumns:"repeat(3,1fr)",
+gap:20,
+marginBottom:40
+}}>
+
+<Card titulo="💰 Receitas" valor={receitas}/>
+<Card titulo="💸 Despesas" valor={despesas}/>
+<Card titulo="🏦 Saldo" valor={saldo}/>
+
+</div>
+
+<div style={{
+display:"grid",
+gridTemplateColumns:"1fr 1fr",
+gap:40
+}}>
+
+<div style={{background:"#111827",padding:20,borderRadius:10}}>
+
+<h3>Distribuição Financeira</h3>
+
+<PieChart width={350} height={300}>
+
+<Pie
+data={dadosGrafico}
+dataKey="value"
+nameKey="name"
+cx="50%"
+cy="50%"
+outerRadius={100}
+label
+>
+
+{dadosGrafico.map((entry,index)=>(
+<Cell key={index} fill={cores[index % cores.length]} />
+))}
+
+</Pie>
+
+<Tooltip/>
+<Legend/>
+
+</PieChart>
+
+</div>
+
+<div style={{background:"#111827",padding:20,borderRadius:10}}>
+
+<h3>Movimentação Mensal</h3>
+
+<LineChart width={350} height={300} data={dadosMes}>
+
+<CartesianGrid strokeDasharray="3 3"/>
+<XAxis dataKey="mes"/>
+<YAxis/>
+<Tooltip/>
+
+<Line
+type="monotone"
+dataKey="valor"
+stroke="#22c55e"
+strokeWidth={3}
+/>
+
+</LineChart>
+
+</div>
+
+</div>
+
+</div>
+
+);
+
+}
+
+function Card({titulo,valor}){
+
+return(
+
+<div style={{
+background:"#111827",
+padding:20,
+borderRadius:10
+}}>
+
+<h3>{titulo}</h3>
+
+<p style={{
+fontSize:24,
+fontWeight:"bold",
+color:"#22c55e"
+}}>
+R$ {Number(valor||0).toFixed(2)}
+</p>
+
+</div>
+
+);
+
 }

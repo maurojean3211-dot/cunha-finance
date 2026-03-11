@@ -1,242 +1,339 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
-import "./App.css";
 
-export default function Admin({ user, role, sair }) {
+export default function Admin(){
 
-  // ================= MENU =================
-  const menuSistema = [
-    { id: "dashboard", nome: "👑 Dashboard" },
-    { id: "financeiro", nome: "💰 Financeiro" },
-    { id: "clientes", nome: "👥 Clientes" },
-    { id: "produtos", nome: "📦 Produtos" },
-    { id: "vendas", nome: "🛒 Vendas" },
-    { id: "compras", nome: "🧾 Compras" },
-    { id: "despesas", nome: "💸 Despesas" },
-  ];
+const [usuario,setUsuario] = useState(null);
+const [empresaId,setEmpresaId] = useState(null);
 
-  const [aba, setAba] = useState("dashboard");
+// VENDA
+const [cliente,setCliente] = useState("");
+const [whatsapp,setWhatsapp] = useState("");
+const [descricao,setDescricao] = useState("");
+const [quantidade,setQuantidade] = useState("");
+const [valorUnitario,setValorUnitario] = useState("");
+const [parcelas,setParcelas] = useState(1);
 
-  // ================= USUARIO LOGADO =================
-  const [usuarioAtual, setUsuarioAtual] = useState(null);
-  const [empresaId, setEmpresaId] = useState(null);
+// COMPRA
+const [fornecedor,setFornecedor] = useState("");
+const [material,setMaterial] = useState("");
+const [kilosCompra,setKilosCompra] = useState("");
+const [valorCompra,setValorCompra] = useState("");
 
-  useEffect(() => {
-    async function pegarUsuario() {
-      const { data } = await supabase.auth.getUser();
+// ================= CARREGAR USUARIO
 
-      if (!data?.user) return;
+useEffect(()=>{
 
-      setUsuarioAtual(data.user);
+async function carregar(){
 
-      // BUSCAR EMPRESA DO USUÁRIO
-      const { data: usuarioDB } = await supabase
-        .from("usuarios")
-        .select("empresa_id")
-        .eq("id", data.user.id)
-        .single();
+const { data } = await supabase.auth.getUser();
+if(!data?.user) return;
 
-      setEmpresaId(usuarioDB?.empresa_id);
-    }
+setUsuario(data.user);
 
-    pegarUsuario();
-  }, []);
+const email = data.user.email.toLowerCase();
 
-  // ================= DADOS =================
-  const [lancamentos, setLancamentos] = useState([]);
-  const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
-  const [tipo, setTipo] = useState("despesa");
+const { data:usuarioDB, error } = await supabase
+.from("usuarios")
+.select("empresa_id")
+.eq("email",email)
+.single();
 
-  // ================= CARREGAR =================
-  useEffect(() => {
-    if (empresaId) carregarTudo();
-  }, [empresaId]);
+if(error){
+console.log("Erro ao buscar usuario:",error);
+return;
+}
 
-  async function carregarTudo() {
+console.log("Empresa encontrada:",usuarioDB?.empresa_id);
 
-    const { data, error } = await supabase
-      .from("lancamentos")
-      .select("*")
-      .eq("empresa_id", empresaId)
-      .order("data", { ascending: false });
+setEmpresaId(usuarioDB?.empresa_id);
 
-    if (error) console.log(error);
+}
 
-    setLancamentos(data || []);
-  }
+carregar();
 
-  // ================= ADICIONAR =================
-  async function adicionarLancamento() {
+},[]);
 
-    if (!descricao || !valor) {
-      alert("Preencha os campos");
-      return;
-    }
+// ================= CALCULOS
 
-    if (!usuarioAtual || !empresaId) {
-      alert("Sessão inválida");
-      return;
-    }
+const totalVenda =
+(Number(quantidade || 0) * Number(valorUnitario || 0)).toFixed(2);
 
-    const hoje = new Date();
+const totalCompra =
+(Number(kilosCompra || 0) * Number(valorCompra || 0)).toFixed(2);
 
-    const { error } = await supabase.from("lancamentos").insert([
-      {
-        descricao,
-        valor: Number(valor),
-        tipo,
-        data: hoje.toISOString(),
-        mes: hoje.getMonth() + 1,
-        ano: hoje.getFullYear(),
-        usuario_id: usuarioAtual.id,
-        empresa_id: empresaId,
-      },
-    ]);
+// ================= SALVAR VENDA
 
-    if (error) {
-      console.log(error);
-      alert(error.message);
-      return;
-    }
+async function salvarVenda(){
 
-    setDescricao("");
-    setValor("");
+if(!empresaId){
+alert("Empresa não carregada");
+return;
+}
 
-    carregarTudo();
-  }
+if(!descricao || !quantidade || !valorUnitario){
+alert("Preencha produto, quantidade e valor");
+return;
+}
 
-  // ================= EXCLUIR =================
-  async function excluirLancamento(id) {
+const valorTotal = Number(totalVenda);
+const valorParcela = valorTotal / parcelas;
 
-    await supabase
-      .from("lancamentos")
-      .delete()
-      .eq("id", id)
-      .eq("empresa_id", empresaId);
+for(let i=0;i<parcelas;i++){
 
-    carregarTudo();
-  }
+let data = new Date();
+data.setMonth(data.getMonth()+i);
 
-  // ================= CALCULOS =================
-  const receitas = lancamentos
-    .filter(l => l.tipo === "receita")
-    .reduce((s, l) => s + Number(l.valor), 0);
+const { error } = await supabase
+.from("lancamentos")
+.insert([{
 
-  const despesas = lancamentos
-    .filter(l => l.tipo !== "receita")
-    .reduce((s, l) => s + Number(l.valor), 0);
+descricao: descricao + (parcelas>1 ? ` (${i+1}/${parcelas})` : ""),
+produto: descricao,
+kilos:Number(quantidade),
 
-  const saldo = receitas - despesas;
+valor:Number(valorParcela),
 
-  const isAdmin = role === "admin";
+tipo:"receita",
+categoria:"venda",
 
-  // ================= TELA =================
-  return (
-    <div className="app-container">
+status:"pendente",
 
-      <div className="menu-lateral">
-        <h2>💼 Cunha Finance</h2>
+cliente:cliente,
+whatsapp:whatsapp,
 
-        <p style={{
-          color: isAdmin ? "#4ade80" : "#f87171",
-          fontSize: 12,
-          fontWeight: "bold"
-        }}>
-          {isAdmin ? "✅ Administrador" : "👤 Usuário"}
-        </p>
+data_lancamento:data.toISOString().split("T")[0],
+ano:data.getFullYear(),
+mes:data.getMonth()+1,
 
-        {menuSistema.map(item => (
-          <button
-            key={item.id}
-            className="botao-primary"
-            style={{ marginTop: 10, width: "100%" }}
-            onClick={() => setAba(item.id)}
-          >
-            {item.nome}
-          </button>
-        ))}
+usuario_id:usuario?.id,
+empresa_id:empresaId
 
-        <hr />
+}]);
 
-        <p style={{ fontSize: 12 }}>{usuarioAtual?.email}</p>
+if(error){
+console.log("Erro ao salvar venda:",error);
+alert("Erro ao salvar venda");
+return;
+}
 
-        <button
-          onClick={sair}
-          className="botao-primary"
-          style={{ marginTop: 20, width: "100%" }}
-        >
-          🚪 Sair
-        </button>
-      </div>
+}
 
-      <div className="conteudo">
+alert("Venda registrada");
 
-        {aba === "dashboard" && (
-          <>
-            <h1>Painel Financeiro</h1>
-            <div className="resumo-box">
-              <p>💰 Receitas: R$ {receitas.toFixed(2)}</p>
-              <p>💸 Despesas: R$ {despesas.toFixed(2)}</p>
-              <p>📊 Saldo: R$ {saldo.toFixed(2)}</p>
-            </div>
-          </>
-        )}
+window.location.reload();
 
-        {aba === "financeiro" && (
-          <>
-            <h2>➕ Novo Lançamento</h2>
+}
 
-            <input
-              placeholder="Descrição"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-            />
+// ================= SALVAR COMPRA
 
-            <input
-              type="number"
-              placeholder="Valor"
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-            />
+async function salvarCompra(){
 
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-              <option value="receita">Receita</option>
-              <option value="despesa">Despesa</option>
-            </select>
+if(!empresaId){
+alert("Empresa não carregada");
+return;
+}
 
-            <button
-              onClick={adicionarLancamento}
-              className="botao-primary"
-              style={{ marginTop: 12 }}
-            >
-              ➕ Salvar Lançamento
-            </button>
+if(!fornecedor || !kilosCompra || !valorCompra){
+alert("Preencha fornecedor, quantidade e valor");
+return;
+}
 
-            <h2>Meus Lançamentos</h2>
+const { error } = await supabase
+.from("compras")
+.insert([{
 
-            {lancamentos.map(l => (
-              <div key={l.id} className="card">
-                <strong>{l.descricao}</strong>
-                <p>R$ {Number(l.valor).toFixed(2)}</p>
+fornecedor:fornecedor,
+material:material,
 
-                <button
-                  className="botao-danger"
-                  onClick={() => excluirLancamento(l.id)}
-                >
-                  ❌ Excluir
-                </button>
-              </div>
-            ))}
-          </>
-        )}
+kilos:Number(kilosCompra),
+preco_compra:Number(valorCompra),
 
-        {aba === "clientes" && <h2>👥 Clientes (em construção)</h2>}
-        {aba === "produtos" && <h2>📦 Produtos (em construção)</h2>}
-        {aba === "vendas" && <h2>🛒 Vendas (em construção)</h2>}
-        {aba === "compras" && <h2>🧾 Compras (em construção)</h2>}
-        {aba === "despesas" && <h2>💸 Despesas (em construção)</h2>}
-      </div>
-    </div>
-  );
+valor_total:Number(totalCompra),
+
+empresa_id:empresaId,
+user_id:usuario?.id
+
+}]);
+
+if(error){
+console.log("Erro compra:",error);
+alert("Erro ao salvar compra");
+return;
+}
+
+alert("Compra registrada");
+
+window.location.reload();
+
+}
+
+// ================= ENVIAR WHATSAPP
+
+function enviarWhatsapp(){
+
+if(!whatsapp){
+alert("Informe o WhatsApp");
+return;
+}
+
+const mensagem =
+`Olá ${cliente}
+Sua compra de ${descricao}
+Total: R$ ${totalVenda}
+Parcelas: ${parcelas}`;
+
+const url =
+`https://wa.me/55${whatsapp}?text=${encodeURIComponent(mensagem)}`;
+
+window.open(url);
+
+}
+
+// ================= GERAR PIX (AGORA VIA API DO SISTEMA)
+
+async function gerarPix(){
+
+if(!descricao || !valorUnitario){
+alert("Preencha produto e valor");
+return;
+}
+
+try{
+
+const response = await fetch("/api/pix",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+valor:Number(totalVenda),
+descricao:descricao
+})
+
+});
+
+const data = await response.json();
+
+console.log("PIX criado:",data);
+
+if(data.invoiceUrl){
+
+window.open(data.invoiceUrl);
+
+}else{
+
+alert("PIX gerado mas não retornou link");
+
+}
+
+}catch(error){
+
+console.log("Erro PIX:",error);
+alert("Erro ao gerar PIX");
+
+}
+
+}
+
+// ================= INPUT STYLE
+
+const input={
+width:"100%",
+maxWidth:420,
+padding:12,
+marginBottom:12,
+borderRadius:6,
+border:"1px solid #475569",
+background:"#111827",
+color:"#fff"
+};
+
+// ================= TELA
+
+return(
+
+<div style={{padding:30,color:"#fff"}}>
+
+<h1>Cunha Finance</h1>
+
+<h2>📦 Registrar Venda</h2>
+
+<input style={input} placeholder="Cliente"
+value={cliente}
+onChange={(e)=>setCliente(e.target.value)}/>
+
+<input style={input} placeholder="WhatsApp"
+value={whatsapp}
+onChange={(e)=>setWhatsapp(e.target.value)}/>
+
+<input style={input} placeholder="Produto / Descrição"
+value={descricao}
+onChange={(e)=>setDescricao(e.target.value)}/>
+
+<input style={input} type="number"
+placeholder="Quantidade"
+value={quantidade}
+onChange={(e)=>setQuantidade(e.target.value)}/>
+
+<input style={input} type="number"
+placeholder="Valor unitário"
+value={valorUnitario}
+onChange={(e)=>setValorUnitario(e.target.value)}/>
+
+<input style={input} type="number"
+placeholder="Parcelas"
+value={parcelas}
+min="1"
+onChange={(e)=>setParcelas(Number(e.target.value))}/>
+
+<h3>Total: R$ {totalVenda}</h3>
+
+<button onClick={salvarVenda}>
+Salvar Venda
+</button>
+
+<button onClick={gerarPix} style={{marginLeft:10}}>
+Gerar PIX
+</button>
+
+<button onClick={enviarWhatsapp} style={{marginLeft:10}}>
+Enviar WhatsApp
+</button>
+
+<hr style={{margin:"40px 0"}}/>
+
+<h2>🏭 Registrar Compra</h2>
+
+<input style={input} placeholder="Fornecedor"
+value={fornecedor}
+onChange={(e)=>setFornecedor(e.target.value)}/>
+
+<input style={input} placeholder="Material"
+value={material}
+onChange={(e)=>setMaterial(e.target.value)}/>
+
+<input style={input} type="number"
+placeholder="Quantidade"
+value={kilosCompra}
+onChange={(e)=>setKilosCompra(e.target.value)}/>
+
+<input style={input} type="number"
+placeholder="Valor unitário"
+value={valorCompra}
+onChange={(e)=>setValorCompra(e.target.value)}/>
+
+<h3>Total: R$ {totalCompra}</h3>
+
+<button onClick={salvarCompra}>
+Salvar Compra
+</button>
+
+</div>
+
+);
+
 }
