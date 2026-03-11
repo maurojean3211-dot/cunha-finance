@@ -82,7 +82,6 @@ alert("Preencha descrição e valor");
 return;
 }
 
-// converter data
 let data = new Date(dataLancamento);
 let mes = data.getMonth()+1;
 let ano = data.getFullYear();
@@ -175,6 +174,46 @@ return;
 }
 
 carregarLancamentos(empresaId);
+
+}
+
+// ================= GERAR PIX
+
+async function gerarPix(l){
+
+try{
+
+const response = await fetch("/api/pix",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+valor:l.valor,
+descricao:l.descricao
+})
+
+});
+
+const data = await response.json();
+
+console.log("PIX:",data);
+
+if(data.invoiceUrl){
+window.open(data.invoiceUrl);
+}else{
+alert("PIX gerado mas não retornou link");
+}
+
+}catch(err){
+
+console.log(err);
+alert("Erro ao gerar PIX");
+
+}
 
 }
 
@@ -283,6 +322,22 @@ cursor:"pointer"
 }}
 >
 Editar
+</button>
+
+<button
+onClick={()=>gerarPix(l)}
+style={{
+background:"#10b981",
+color:"#fff",
+border:"none",
+padding:"6px 12px",
+marginTop:8,
+marginRight:5,
+borderRadius:6,
+cursor:"pointer"
+}}
+>
+Gerar PIX
 </button>
 
 <button

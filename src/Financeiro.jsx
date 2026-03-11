@@ -82,6 +82,63 @@ carregarLancamentos(empresaId);
 
 }
 
+// ================= GERAR PIX
+
+async function gerarPix(l){
+
+try{
+
+const response = await fetch("https://cunha-finance.vercel.app/api/pix",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+valor:l.valor,
+descricao:l.descricao
+
+})
+
+});
+
+if(!response.ok){
+
+throw new Error("Erro ao conectar API PIX");
+
+}
+
+const data = await response.json();
+
+console.log("PIX criado:",data);
+
+if(data.invoiceUrl){
+
+window.open(data.invoiceUrl,"_blank");
+
+}else if(data.pixQrCode){
+
+alert("PIX gerado! Copie o código abaixo:\n\n"+data.pixQrCode);
+
+}else{
+
+alert("PIX gerado mas sem retorno esperado");
+
+}
+
+}catch(err){
+
+console.log("Erro PIX:",err);
+
+alert("Erro ao gerar PIX");
+
+}
+
+}
+
 // ================= FORMATAR DATA
 
 function formatarData(data){
@@ -127,6 +184,21 @@ borderRadius:6
 💰 R$ {Number(l.valor || 0).toFixed(2)}
 
 <br/><br/>
+
+<button
+onClick={()=>gerarPix(l)}
+style={{
+marginRight:10,
+background:"#10b981",
+color:"#fff",
+border:"none",
+padding:"6px 10px",
+borderRadius:4,
+cursor:"pointer"
+}}
+>
+💳 Gerar PIX
+</button>
 
 <button onClick={()=>excluir(l.id)}>
 🗑 Excluir
