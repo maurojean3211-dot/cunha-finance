@@ -86,9 +86,14 @@ carregarLancamentos(empresaId);
 
 async function gerarPix(l){
 
+if(!empresaId){
+alert("Empresa não carregada");
+return;
+}
+
 try{
 
-const response = await fetch("https://cunha-finance.vercel.app/api/pix",{
+const response = await fetch("/api/pix",{
 
 method:"POST",
 
@@ -106,9 +111,7 @@ descricao:l.descricao
 });
 
 if(!response.ok){
-
 throw new Error("Erro ao conectar API PIX");
-
 }
 
 const data = await response.json();

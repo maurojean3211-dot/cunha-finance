@@ -31,12 +31,12 @@ if(!data?.user) return;
 
 setUsuario(data.user);
 
-const email = data.user.email.toLowerCase();
+const userId = data.user.id;
 
 const { data:usuarioDB, error } = await supabase
 .from("usuarios")
 .select("empresa_id")
-.eq("email",email)
+.eq("id",userId)
 .single();
 
 if(error){
@@ -190,7 +190,7 @@ window.open(url);
 
 }
 
-// ================= GERAR PIX (AGORA VIA API DO SISTEMA)
+// ================= GERAR PIX
 
 async function gerarPix(){
 
