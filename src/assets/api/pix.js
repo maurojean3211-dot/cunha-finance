@@ -8,46 +8,42 @@ if (req.method === "OPTIONS") {
 return res.status(200).end();
 }
 
-if (req.method !== "POST") {
-return res.status(405).json({ erro: "Método não permitido" });
-}
-
 try {
 
-const body = req.body;
-
-if (!body) {
-return res.status(400).json({
-erro: "Body não enviado"
-});
-}
-
-const response = await fetch("https://api.asaas.com/v3/payments", {
+const createPayment = await fetch("https://api.asaas.com/v3/payments", {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
 "access_token": process.env.ASAAS_API_KEY
 },
-body: JSON.stringify(body)
+body: JSON.stringify({
+billingType: "PIX",
+value: req.body.valor,
+description: req.body.descricao,
+dueDate: new Date().toISOString().split("T")[0]
+})
 });
 
-const data = await response.json();
+const payment = await createPayment.json();
 
-if (!response.ok) {
-return res.status(response.status).json({
-erro: "Erro retornado pelo Asaas",
-detalhe: data
-});
+const pixQr = await fetch(`https://api.asaas.com/v3/payments/${payment.id}/pixQrCode`, {
+headers: {
+"access_token": process.env.ASAAS_API_KEY
 }
+});
 
-return res.status(200).json(data);
+const qr = await pixQr.json();
+
+return res.status(200).json({
+id: payment.id,
+pixCopiaECola: qr.payload,
+qrCode: qr.encodedImage
+});
 
 } catch (error) {
 
-console.error("Erro ao gerar PIX:", error);
-
 return res.status(500).json({
-erro: "Erro interno ao gerar PIX",
+erro: "Erro ao gerar PIX",
 detalhe: error.message
 });
 
