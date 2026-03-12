@@ -118,13 +118,16 @@ const data = await response.json();
 
 console.log("PIX criado:",data);
 
-if(data.invoiceUrl){
+// ================= TRATAMENTO DO RETORNO
 
-window.open(data.invoiceUrl,"_blank");
+if(data.pixCopiaECola){
 
-}else if(data.pixQrCode){
+alert("PIX gerado! Copie o código abaixo:\n\n"+data.pixCopiaECola);
 
-alert("PIX gerado! Copie o código abaixo:\n\n"+data.pixQrCode);
+}else if(data.qrCode){
+
+const img = window.open("");
+img.document.write("<img src='data:image/png;base64,"+data.qrCode+"' />");
 
 }else{
 
