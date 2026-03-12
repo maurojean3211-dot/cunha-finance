@@ -14,25 +14,40 @@ return res.status(405).json({ erro: "Método não permitido" });
 
 try {
 
+const body = req.body;
+
+if (!body) {
+return res.status(400).json({
+erro: "Body não enviado"
+});
+}
+
 const response = await fetch("https://api.asaas.com/v3/payments", {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
 "access_token": process.env.ASAAS_API_KEY
 },
-body: JSON.stringify(req.body)
+body: JSON.stringify(body)
 });
 
 const data = await response.json();
+
+if (!response.ok) {
+return res.status(response.status).json({
+erro: "Erro retornado pelo Asaas",
+detalhe: data
+});
+}
 
 return res.status(200).json(data);
 
 } catch (error) {
 
-console.error("Erro PIX:", error);
+console.error("Erro ao gerar PIX:", error);
 
 return res.status(500).json({
-erro: "Erro ao criar PIX",
+erro: "Erro interno ao gerar PIX",
 detalhe: error.message
 });
 
