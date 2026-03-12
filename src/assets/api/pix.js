@@ -8,13 +8,27 @@ if (req.method === "OPTIONS") {
 return res.status(200).end();
 }
 
-if (req.method !== "POST") {
-return res.status(405).json({ erro: "Método não permitido" });
-}
-
 try {
 
-// ===== CRIAR PAGAMENTO PIX NO ASAAS
+// ================= BUSCAR CLIENTE PELO CPF
+
+const searchCustomer = await fetch("https://api.asaas.com/v3/customers?cpfCnpj=00307549682", {
+headers: {
+"access_token": process.env.ASAAS_API_KEY
+}
+});
+
+const customerData = await searchCustomer.json();
+
+if(!customerData.data || customerData.data.length === 0){
+return res.status(400).json({
+erro: "Cliente não encontrado no Asaas"
+});
+}
+
+const customerId = customerData.data[0].id;
+
+// ================= CRIAR PAGAMENTO PIX
 
 const createPayment = await fetch("https://api.asaas.com/v3/payments", {
 method: "POST",
@@ -23,7 +37,7 @@ headers: {
 "access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
-customer: "162865128",
+customer: customerId,
 billingType: "PIX",
 value: req.body.valor,
 description: req.body.descricao,
@@ -34,35 +48,29 @@ dueDate: new Date().toISOString().split("T")[0]
 const payment = await createPayment.json();
 
 if(payment.errors){
-console.log("Erro ASAAS:", payment.errors);
 return res.status(400).json(payment);
 }
 
-// ===== BUSCAR QR CODE PIX
+// ================= PEGAR QR CODE
 
 const pixQr = await fetch(`https://api.asaas.com/v3/payments/${payment.id}/pixQrCode`, {
-method: "GET",
-headers: {
+headers:{
 "access_token": process.env.ASAAS_API_KEY
 }
 });
 
 const qr = await pixQr.json();
 
-// ===== RETORNAR PARA O SISTEMA
-
 return res.status(200).json({
 pixCopiaECola: qr.payload,
 qrCode: qr.encodedImage
 });
 
-} catch (error) {
-
-console.error("Erro PIX:", error);
+} catch(error){
 
 return res.status(500).json({
-erro: "Erro ao gerar PIX",
-detalhe: error.message
+erro:"Erro ao gerar PIX",
+detalhe:error.message
 });
 
 }
