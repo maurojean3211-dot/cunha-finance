@@ -94,51 +94,47 @@ return;
 try{
 
 const response = await fetch("/api/pix",{
-
 method:"POST",
-
 headers:{
 "Content-Type":"application/json"
 },
-
 body:JSON.stringify({
-
 valor:l.valor,
 descricao:l.descricao
-
 })
-
 });
-
-if(!response.ok){
-throw new Error("Erro ao conectar API PIX");
-}
 
 const data = await response.json();
 
 console.log("PIX criado:",data);
 
-// ================= TRATAMENTO DO RETORNO
+// ===== MOSTRAR ERRO REAL DO ASAAS
+
+if(data.erro){
+alert("Erro ASAAS:\n\n"+JSON.stringify(data.detalhe));
+return;
+}
 
 if(data.pixCopiaECola){
 
-alert("PIX gerado! Copie o código abaixo:\n\n"+data.pixCopiaECola);
+alert("PIX gerado!\n\nCopie o código:\n\n"+data.pixCopiaECola);
+return;
 
-}else if(data.qrCode){
+}
+
+if(data.qrCode){
 
 const img = window.open("");
 img.document.write("<img src='data:image/png;base64,"+data.qrCode+"' />");
-
-}else{
-
-alert("PIX gerado mas sem retorno esperado");
+return;
 
 }
+
+alert("PIX gerado mas sem retorno esperado");
 
 }catch(err){
 
 console.log("Erro PIX:",err);
-
 alert("Erro ao gerar PIX");
 
 }
