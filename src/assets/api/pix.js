@@ -20,15 +20,13 @@ headers:{
 },
 body:JSON.stringify({
 name:"Cliente Cunha Finance",
-email:"cliente@teste.com"
+email:"cliente@cunhafinance.com"
 })
 });
 
 const customer = await createCustomer.json();
 
-console.log("Cliente:",customer);
-
-// ===== CRIAR PIX
+// ===== CRIAR PAGAMENTO PIX
 
 const createPayment = await fetch("https://api.asaas.com/v3/payments",{
 method:"POST",
@@ -47,16 +45,11 @@ dueDate:new Date().toISOString().split("T")[0]
 
 const payment = await createPayment.json();
 
-console.log("Pagamento:",payment);
-
 if(payment.errors){
-return res.status(400).json({
-erro:"Erro ASAAS",
-detalhe:payment.errors
-});
+return res.status(400).json(payment);
 }
 
-// ===== QR CODE
+// ===== BUSCAR QR CODE
 
 const pixQr = await fetch(`https://api.asaas.com/v3/payments/${payment.id}/pixQrCode`,{
 headers:{
@@ -72,8 +65,6 @@ qrCode:qr.encodedImage
 });
 
 }catch(error){
-
-console.error("Erro PIX:",error);
 
 return res.status(500).json({
 erro:"Erro ao gerar PIX",
