@@ -17,6 +17,7 @@ headers: {
 "access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
+customer: "cus_000005000000",
 billingType: "PIX",
 value: req.body.valor,
 description: req.body.descricao,
@@ -35,7 +36,6 @@ headers: {
 const qr = await pixQr.json();
 
 return res.status(200).json({
-id: payment.id,
 pixCopiaECola: qr.payload,
 qrCode: qr.encodedImage
 });
