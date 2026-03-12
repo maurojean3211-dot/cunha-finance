@@ -8,31 +8,13 @@ if (req.method === "OPTIONS") {
 return res.status(200).end();
 }
 
-try {
-
-// ===== CRIAR CLIENTE
-
-const createCustomer = await fetch("https://api.asaas.com/v3/customers", {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"access_token": process.env.ASAAS_API_KEY
-},
-body: JSON.stringify({
-name: "Cliente Cunha Finance",
-cpfCnpj: "12345678909",
-phone: "11999999999",
-email: "cliente@cunhafinance.com"
-})
-});
-
-const customer = await createCustomer.json();
-
-if(customer.errors){
-return res.status(400).json(customer);
+if (req.method !== "POST") {
+return res.status(405).json({ erro: "Método não permitido" });
 }
 
-// ===== CRIAR PAGAMENTO PIX
+try {
+
+// ===== CRIAR PAGAMENTO PIX NO ASAAS
 
 const createPayment = await fetch("https://api.asaas.com/v3/payments", {
 method: "POST",
@@ -41,7 +23,7 @@ headers: {
 "access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
-customer: customer.id,
+customer: "162865128",
 billingType: "PIX",
 value: req.body.valor,
 description: req.body.descricao,
@@ -52,12 +34,14 @@ dueDate: new Date().toISOString().split("T")[0]
 const payment = await createPayment.json();
 
 if(payment.errors){
+console.log("Erro ASAAS:", payment.errors);
 return res.status(400).json(payment);
 }
 
-// ===== BUSCAR QR CODE
+// ===== BUSCAR QR CODE PIX
 
 const pixQr = await fetch(`https://api.asaas.com/v3/payments/${payment.id}/pixQrCode`, {
+method: "GET",
 headers: {
 "access_token": process.env.ASAAS_API_KEY
 }
@@ -65,12 +49,16 @@ headers: {
 
 const qr = await pixQr.json();
 
+// ===== RETORNAR PARA O SISTEMA
+
 return res.status(200).json({
 pixCopiaECola: qr.payload,
 qrCode: qr.encodedImage
 });
 
 } catch (error) {
+
+console.error("Erro PIX:", error);
 
 return res.status(500).json({
 erro: "Erro ao gerar PIX",
