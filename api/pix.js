@@ -20,7 +20,11 @@ headers: {
 "Content-Type": "application/json",
 "access_token": process.env.ASAAS_API_KEY
 },
-body: JSON.stringify(req.body)
+body: JSON.stringify({
+billingType: "PIX",
+value: req.body.valor,
+description: req.body.descricao
+})
 });
 
 const data = await response.json();
