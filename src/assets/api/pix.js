@@ -8,27 +8,36 @@ if (req.method === "OPTIONS") {
 return res.status(200).end();
 }
 
+if (req.method !== "POST") {
+return res.status(405).json({ erro: "Método não permitido" });
+}
+
 try {
 
-// ================= BUSCAR CLIENTE PELO CPF
+// ================= CRIAR CLIENTE
 
-const searchCustomer = await fetch("https://api.asaas.com/v3/customers?cpfCnpj=00307549682", {
+const createCustomer = await fetch("https://api.asaas.com/v3/customers", {
+method: "POST",
 headers: {
+"Content-Type": "application/json",
 "access_token": process.env.ASAAS_API_KEY
-}
+},
+body: JSON.stringify({
+name: "Cliente Cunha Finance",
+cpfCnpj: "52998224725",
+email: "cliente@cunhafinance.com",
+phone: "11999999999"
+})
 });
 
-const customerData = await searchCustomer.json();
+const customer = await createCustomer.json();
 
-if(!customerData.data || customerData.data.length === 0){
-return res.status(400).json({
-erro: "Cliente não encontrado no Asaas"
-});
+if(customer.errors){
+console.log(customer.errors);
+return res.status(400).json(customer);
 }
 
-const customerId = customerData.data[0].id;
-
-// ================= CRIAR PAGAMENTO PIX
+// ================= CRIAR COBRANÇA PIX
 
 const createPayment = await fetch("https://api.asaas.com/v3/payments", {
 method: "POST",
@@ -37,9 +46,9 @@ headers: {
 "access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
-customer: customerId,
+customer: customer.id,
 billingType: "PIX",
-value: req.body.valor,
+value: Number(req.body.valor),
 description: req.body.descricao,
 dueDate: new Date().toISOString().split("T")[0]
 })
@@ -48,10 +57,11 @@ dueDate: new Date().toISOString().split("T")[0]
 const payment = await createPayment.json();
 
 if(payment.errors){
+console.log(payment.errors);
 return res.status(400).json(payment);
 }
 
-// ================= PEGAR QR CODE
+// ================= GERAR QR CODE
 
 const pixQr = await fetch(`https://api.asaas.com/v3/payments/${payment.id}/pixQrCode`, {
 headers:{
@@ -61,16 +71,20 @@ headers:{
 
 const qr = await pixQr.json();
 
+// ================= RETORNAR
+
 return res.status(200).json({
 pixCopiaECola: qr.payload,
 qrCode: qr.encodedImage
 });
 
-} catch(error){
+} catch (error) {
+
+console.error("Erro PIX:", error);
 
 return res.status(500).json({
-erro:"Erro ao gerar PIX",
-detalhe:error.message
+erro: "Erro ao gerar PIX",
+detalhe: error.message
 });
 
 }
