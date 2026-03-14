@@ -44,8 +44,6 @@ console.log("Erro ao buscar usuario:",error);
 return;
 }
 
-console.log("Empresa encontrada:",usuarioDB?.empresa_id);
-
 setEmpresaId(usuarioDB?.empresa_id);
 
 }
@@ -120,7 +118,6 @@ return;
 }
 
 alert("Venda registrada");
-
 window.location.reload();
 
 }
@@ -163,7 +160,6 @@ return;
 }
 
 alert("Compra registrada");
-
 window.location.reload();
 
 }
@@ -220,13 +216,19 @@ const data = await response.json();
 
 console.log("PIX criado:",data);
 
-if(data.invoiceUrl){
+if(data.qrCode){
 
-window.open(data.invoiceUrl);
+const novaJanela = window.open("");
+novaJanela.document.write(`
+<h2>Pagamento PIX</h2>
+<img src="${data.qrCode}" width="250"/>
+<p>PIX Copia e Cola:</p>
+<textarea rows="5" cols="40">${data.pixCopiaECola}</textarea>
+`);
 
 }else{
 
-alert("PIX gerado mas não retornou link");
+alert("PIX gerado mas QR Code não retornou");
 
 }
 

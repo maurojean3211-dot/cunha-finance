@@ -34,14 +34,17 @@ async function iniciar(){
 const { data:{ user } } = await supabase.auth.getUser();
 if(!user) return;
 
-// buscar empresa do usuário
+// buscar empresa do usuário pelo ID
 const { data:usuario } = await supabase
 .from("usuarios")
 .select("empresa_id")
-.eq("email",user.email)
+.eq("id",user.id)
 .single();
 
-if(!usuario?.empresa_id) return;
+if(!usuario?.empresa_id){
+console.log("Empresa não encontrada");
+return;
+}
 
 setEmpresaId(usuario.empresa_id);
 
@@ -61,8 +64,10 @@ console.log(error);
 return;
 }
 
-setLancamentos(data || []);
-calcularDados(data || []);
+const lista = data || [];
+
+setLancamentos(lista);
+calcularDados(lista);
 
 }
 
@@ -131,7 +136,9 @@ const nomesMes=[
 "Jul","Ago","Set","Out","Nov","Dez"
 ];
 
-const dadosLinha = Object.keys(meses).map(m=>({
+const dadosLinha = Object.keys(meses)
+.sort((a,b)=>a-b)
+.map(m=>({
 mes: nomesMes[m-1],
 valor: meses[m]
 }));

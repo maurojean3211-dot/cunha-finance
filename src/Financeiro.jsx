@@ -99,8 +99,10 @@ headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-valor:l.valor,
-descricao:l.descricao
+nome:"Cliente Cunha Finance",
+cpf:"00307549682",
+valor:Number(l.valor || 0),
+descricao:l.descricao || "Pagamento"
 })
 });
 
@@ -108,24 +110,37 @@ const data = await response.json();
 
 console.log("PIX criado:",data);
 
-// ===== MOSTRAR ERRO REAL DO ASAAS
+// ===== ERRO ASAAS
 
-if(data.erro){
-alert("Erro ASAAS:\n\n"+JSON.stringify(data.detalhe));
+if(data?.errors){
+alert("Erro ASAAS:\n\n"+JSON.stringify(data.errors));
 return;
 }
 
-if(data.pixCopiaECola){
+if(data?.erro){
+alert("Erro:\n\n"+JSON.stringify(data));
+return;
+}
+
+// ===== PIX COPIA E COLA
+
+if(data?.pixCopiaECola){
 
 alert("PIX gerado!\n\nCopie o código:\n\n"+data.pixCopiaECola);
 return;
 
 }
 
-if(data.qrCode){
+// ===== QR CODE
+
+if(data?.qrCode){
 
 const img = window.open("");
-img.document.write("<img src='data:image/png;base64,"+data.qrCode+"' />");
+
+if(img){
+img.document.write("<img style='width:300px' src='data:image/png;base64,"+data.qrCode+"' />");
+}
+
 return;
 
 }
