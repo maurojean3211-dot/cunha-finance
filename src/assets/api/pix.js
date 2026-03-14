@@ -30,10 +30,10 @@ const cpf = "00307549682";
 let customerId = null;
 
 // ==========================
-// API ASAAS HOMOLOGAÇÃO
+// API ASAAS (SANDBOX / HMLG)
 // ==========================
 
-const API = "https://api-hmlg.asaas.com/v3";
+const API = "https://api-sandbox.asaas.com/v3";
 
 // ==========================
 // BUSCAR CLIENTE EXISTENTE
@@ -63,6 +63,7 @@ const clienteReq = await fetch(`${API}/customers`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
+"accept": "application/json",
 "access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
@@ -101,6 +102,7 @@ const pagamentoReq = await fetch(`${API}/payments`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
+"accept": "application/json",
 "access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
