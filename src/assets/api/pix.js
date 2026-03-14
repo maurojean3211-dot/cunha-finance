@@ -30,10 +30,10 @@ const cpf = "00307549682";
 let customerId = null;
 
 // ==========================
-// API HOMOLOGAÇÃO ASAAS
+// API ASAAS HOMOLOGAÇÃO
 // ==========================
 
-const API = "https://api-sandbox.asaas.com/v3";
+const API = "https://api-hmlg.asaas.com/v3";
 
 // ==========================
 // BUSCAR CLIENTE EXISTENTE
