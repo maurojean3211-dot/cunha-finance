@@ -29,8 +29,11 @@ erro: "Valor inválido"
 const cpf = "00307549682";
 let customerId = null;
 
-// API PRODUÇÃO
-const API = "https://api.asaas.com/v3";
+// ==========================
+// API HOMOLOGAÇÃO ASAAS
+// ==========================
+
+const API = "https://api-sandbox.asaas.com/v3";
 
 // ==========================
 // BUSCAR CLIENTE EXISTENTE
@@ -128,7 +131,7 @@ pagamento
 }
 
 // ==========================
-// BUSCAR QR CODE
+// BUSCAR QR CODE PIX
 // ==========================
 
 let qr = null;
