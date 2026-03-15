@@ -27,9 +27,10 @@ return res.status(400).json({ erro: "Valor inválido" });
 const cpf = "00307549682";
 let customerId = null;
 
-// ENDPOINT ASAAS
-const API = "https://api.asaas.com/v3";
+// ENDPOINT CORRETO
+const API = "https://api-sandbox.asaas.com/v3";
 
+// buscar cliente
 const buscaReq = await fetch(`${API}/customers?cpfCnpj=${cpf}`, {
 method: "GET",
 headers: {
@@ -48,6 +49,7 @@ const clienteReq = await fetch(`${API}/customers`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
+accept: "application/json",
 access_token: process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
@@ -66,10 +68,12 @@ return res.status(400).json(cliente);
 customerId = cliente.id;
 }
 
+// criar cobrança
 const pagamentoReq = await fetch(`${API}/payments`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
+accept: "application/json",
 access_token: process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
@@ -87,8 +91,10 @@ if (!pagamento.id) {
 return res.status(400).json(pagamento);
 }
 
+// buscar QR Code
 const qrReq = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`, {
 headers: {
+accept: "application/json",
 access_token: process.env.ASAAS_API_KEY
 }
 });
