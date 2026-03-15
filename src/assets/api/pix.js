@@ -19,38 +19,26 @@ const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
 const nome = body?.nome || "Cliente Teste";
 const valor = Number(body?.valor || 10);
 const descricao = body?.descricao || "Pagamento PIX";
+const cpf = "00307549682";
 
 if (valor <= 0) {
 return res.status(400).json({ erro: "Valor inválido" });
 }
 
-const cpf = "00307549682";
-let customerId = null;
-
-// ENDPOINT CORRETO
 const API = "https://api-sandbox.asaas.com/v3";
 
-// buscar cliente
-const buscaReq = await fetch(`${API}/customers?cpfCnpj=${cpf}`, {
-method: "GET",
-headers: {
-accept: "application/json",
-access_token: process.env.ASAAS_API_KEY
-}
-});
+let customerId = null;
 
-const buscaCliente = await buscaReq.json();
-
-if (buscaCliente?.data?.length > 0) {
-customerId = buscaCliente.data[0].id;
-} else {
+// ==========================
+// CRIAR CLIENTE DIRETO
+// ==========================
 
 const clienteReq = await fetch(`${API}/customers`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-accept: "application/json",
-access_token: process.env.ASAAS_API_KEY
+"accept": "application/json",
+"access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
 name: nome,
@@ -61,20 +49,26 @@ email: "teste@email.com"
 
 const cliente = await clienteReq.json();
 
-if (cliente.errors) {
-return res.status(400).json(cliente);
+if (!cliente.id) {
+return res.status(400).json({
+erro: "Erro ao criar cliente",
+detalhe: cliente
+});
 }
 
 customerId = cliente.id;
-}
 
-// criar cobrança
+
+// ==========================
+// CRIAR COBRANÇA PIX
+// ==========================
+
 const pagamentoReq = await fetch(`${API}/payments`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-accept: "application/json",
-access_token: process.env.ASAAS_API_KEY
+"accept": "application/json",
+"access_token": process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
 customer: customerId,
@@ -88,14 +82,22 @@ description: descricao
 const pagamento = await pagamentoReq.json();
 
 if (!pagamento.id) {
-return res.status(400).json(pagamento);
+return res.status(400).json({
+erro: "Erro ao criar pagamento",
+detalhe: pagamento
+});
 }
 
-// buscar QR Code
+
+// ==========================
+// GERAR QR CODE PIX
+// ==========================
+
 const qrReq = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`, {
+method: "GET",
 headers: {
-accept: "application/json",
-access_token: process.env.ASAAS_API_KEY
+"accept": "application/json",
+"access_token": process.env.ASAAS_API_KEY
 }
 });
 
@@ -108,6 +110,8 @@ pagamentoId: pagamento.id
 });
 
 } catch (error) {
+
+console.log("ERRO:", error);
 
 return res.status(500).json({
 erro: "Erro ao gerar PIX",
