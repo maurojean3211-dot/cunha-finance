@@ -5,101 +5,116 @@ res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 if (req.method === "OPTIONS") {
-  return res.status(200).end();
+return res.status(200).end();
 }
 
 if (req.method !== "POST") {
-  return res.status(405).json({ erro: "Método não permitido" });
+return res.status(405).json({ erro: "Método não permitido" });
 }
 
 try {
 
+const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+
+const nome = body?.nome || "Cliente Teste";
+const valor = Number(body?.valor || 10);
+const descricao = body?.descricao || "Pagamento PIX";
+
 const API = "https://api-sandbox.asaas.com/v3";
 
-const nome = "Cliente Teste";
-const cpf = "12345678909"; // CPF válido de teste
-const valor = 10;
 
-
-// =========================
+// ==========================
 // CRIAR CLIENTE
-// =========================
+// ==========================
 
-const clienteResponse = await fetch(`${API}/customers`, {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"access_token": process.env.ASAAS_API_KEY
+const clienteReq = await fetch(`${API}/customers`, {
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"access_token":process.env.ASAAS_API_KEY
 },
-body: JSON.stringify({
-name: nome,
-cpfCnpj: cpf
+body:JSON.stringify({
+name:nome,
+cpfCnpj:"12345678909"
 })
 });
 
-const cliente = await clienteResponse.json();
+const cliente = await clienteReq.json();
 
-if (!cliente.id) {
+if(!cliente.id){
 return res.status(400).json({
-erro: "Erro ao criar cliente",
-detalhe: cliente
+erro:"Erro ao criar cliente",
+cliente
 });
 }
 
 const customerId = cliente.id;
 
 
-// =========================
-// CRIAR COBRANÇA PIX
-// =========================
+// ==========================
+// CRIAR PAGAMENTO PIX
+// ==========================
 
-const pagamentoResponse = await fetch(`${API}/payments`, {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"access_token": process.env.ASAAS_API_KEY
+const pagamentoReq = await fetch(`${API}/payments`,{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"access_token":process.env.ASAAS_API_KEY
 },
-body: JSON.stringify({
-customer: customerId,
-billingType: "PIX",
-value: valor,
-dueDate: new Date().toISOString().split("T")[0]
+body:JSON.stringify({
+customer:customerId,
+billingType:"PIX",
+value:valor,
+dueDate:new Date().toISOString().split("T")[0],
+description:descricao
 })
 });
 
-const pagamento = await pagamentoResponse.json();
+const pagamento = await pagamentoReq.json();
 
-if (!pagamento.id) {
+if(!pagamento.id){
 return res.status(400).json({
-erro: "Erro ao criar pagamento",
-detalhe: pagamento
+erro:"Erro ao criar pagamento",
+pagamento
 });
 }
 
 
-// =========================
-// PEGAR QR CODE
-// =========================
+// ==========================
+// BUSCAR QR CODE
+// ==========================
 
-const qrResponse = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`, {
-headers: {
-"access_token": process.env.ASAAS_API_KEY
+let qr = null;
+
+for(let i=0;i<5;i++){
+
+const qrReq = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`,{
+headers:{
+"access_token":process.env.ASAAS_API_KEY
 }
 });
 
-const qr = await qrResponse.json();
+qr = await qrReq.json();
+
+if(qr?.payload){
+break;
+}
+
+await new Promise(r=>setTimeout(r,800));
+
+}
 
 return res.status(200).json({
-pixCopiaECola: qr.payload,
-qrCode: qr.encodedImage,
-pagamentoId: pagamento.id
+pixCopiaECola:qr.payload,
+qrCode:qr.encodedImage,
+pagamentoId:pagamento.id
 });
 
-} catch (error) {
+}catch(error){
 
 return res.status(500).json({
-erro: "Erro interno",
-detalhe: error.message
+erro:"Erro ao gerar PIX",
+detalhe:error.message
 });
 
 }
