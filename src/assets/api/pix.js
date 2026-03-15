@@ -5,11 +5,11 @@ res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 if (req.method === "OPTIONS") {
-return res.status(200).end();
+  return res.status(200).end();
 }
 
 if (req.method !== "POST") {
-return res.status(405).json({ erro: "Método não permitido" });
+  return res.status(405).json({ erro: "Método não permitido" });
 }
 
 try {
@@ -22,15 +22,16 @@ const descricao = body?.descricao || "Pagamento PIX";
 const cpf = "00307549682";
 
 if (valor <= 0) {
-return res.status(400).json({ erro: "Valor inválido" });
+  return res.status(400).json({ erro: "Valor inválido" });
 }
 
 const API = "https://api-sandbox.asaas.com/v3";
 
 let customerId = null;
 
+
 // ==========================
-// CRIAR CLIENTE DIRETO
+// CRIAR CLIENTE
 // ==========================
 
 const clienteReq = await fetch(`${API}/customers`, {
@@ -49,9 +50,11 @@ email: "teste@email.com"
 
 const cliente = await clienteReq.json();
 
-if (!cliente.id) {
+console.log("CLIENTE ASAAS:", cliente);
+
+if (!cliente || !cliente.id) {
 return res.status(400).json({
-erro: "Erro ao criar cliente",
+erro: "Erro ao criar cliente no Asaas",
 detalhe: cliente
 });
 }
@@ -81,16 +84,18 @@ description: descricao
 
 const pagamento = await pagamentoReq.json();
 
-if (!pagamento.id) {
+console.log("PAGAMENTO ASAAS:", pagamento);
+
+if (!pagamento || !pagamento.id) {
 return res.status(400).json({
-erro: "Erro ao criar pagamento",
+erro: "Erro ao criar cobrança PIX",
 detalhe: pagamento
 });
 }
 
 
 // ==========================
-// GERAR QR CODE PIX
+// GERAR QR CODE
 // ==========================
 
 const qrReq = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`, {
@@ -111,7 +116,7 @@ pagamentoId: pagamento.id
 
 } catch (error) {
 
-console.log("ERRO:", error);
+console.log("ERRO PIX:", error);
 
 return res.status(500).json({
 erro: "Erro ao gerar PIX",
