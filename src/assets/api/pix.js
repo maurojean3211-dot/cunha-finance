@@ -5,11 +5,11 @@ res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
 res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
 if (req.method === "OPTIONS") {
-  return res.status(200).end();
+return res.status(200).end();
 }
 
 if (req.method !== "POST") {
-  return res.status(405).json({ erro: "Método não permitido" });
+return res.status(405).json({ erro: "Método não permitido" });
 }
 
 try {
@@ -21,45 +21,34 @@ const valor = Number(body?.valor || 10);
 const descricao = body?.descricao || "Pagamento PIX";
 
 if (valor <= 0) {
-  return res.status(400).json({ erro: "Valor inválido" });
+return res.status(400).json({ erro: "Valor inválido" });
 }
 
 const cpf = "00307549682";
 let customerId = null;
 
-// ENDPOINT CORRETO ASAAS
-const API = "https://api-sandbox.asaas.com/v3";
-
-// ==========================
-// BUSCAR CLIENTE
-// ==========================
+// ENDPOINT ASAAS
+const API = "https://api.asaas.com/v3";
 
 const buscaReq = await fetch(`${API}/customers?cpfCnpj=${cpf}`, {
 method: "GET",
 headers: {
-"accept": "application/json",
-"access_token": process.env.ASAAS_API_KEY
+accept: "application/json",
+access_token: process.env.ASAAS_API_KEY
 }
 });
 
 const buscaCliente = await buscaReq.json();
 
-if (buscaCliente?.data && buscaCliente.data.length > 0) {
-
+if (buscaCliente?.data?.length > 0) {
 customerId = buscaCliente.data[0].id;
-
 } else {
-
-// ==========================
-// CRIAR CLIENTE
-// ==========================
 
 const clienteReq = await fetch(`${API}/customers`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-"accept": "application/json",
-"access_token": process.env.ASAAS_API_KEY
+access_token: process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
 name: nome,
@@ -75,19 +64,13 @@ return res.status(400).json(cliente);
 }
 
 customerId = cliente.id;
-
 }
-
-// ==========================
-// CRIAR COBRANÇA PIX
-// ==========================
 
 const pagamentoReq = await fetch(`${API}/payments`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-"accept": "application/json",
-"access_token": process.env.ASAAS_API_KEY
+access_token: process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
 customer: customerId,
@@ -104,15 +87,9 @@ if (!pagamento.id) {
 return res.status(400).json(pagamento);
 }
 
-// ==========================
-// GERAR QR CODE PIX
-// ==========================
-
 const qrReq = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`, {
-method: "GET",
 headers: {
-"accept": "application/json",
-"access_token": process.env.ASAAS_API_KEY
+access_token: process.env.ASAAS_API_KEY
 }
 });
 
@@ -125,8 +102,6 @@ pagamentoId: pagamento.id
 });
 
 } catch (error) {
-
-console.log("ERRO PIX:", error);
 
 return res.status(500).json({
 erro: "Erro ao gerar PIX",
