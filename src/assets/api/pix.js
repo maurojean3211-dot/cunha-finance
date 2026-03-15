@@ -27,14 +27,10 @@ return res.status(400).json({ erro: "Valor inválido" });
 const cpf = "00307549682";
 let customerId = null;
 
-// API ASAAS SANDBOX
-const API = "https://api-sandbox.asaas.com/v3";
+// API ASAAS HOMOLOGAÇÃO
+const API = "https://api-hmlg.asaas.com/v3";
 
-
-// ==========================
-// BUSCAR CLIENTE
-// ==========================
-
+// buscar cliente
 const buscaReq = await fetch(`${API}/customers?cpfCnpj=${cpf}`, {
 method: "GET",
 headers: {
@@ -46,20 +42,13 @@ access_token: process.env.ASAAS_API_KEY
 const buscaCliente = await buscaReq.json();
 
 if (buscaCliente?.data?.length > 0) {
-
 customerId = buscaCliente.data[0].id;
-
 } else {
-
-// ==========================
-// CRIAR CLIENTE
-// ==========================
 
 const clienteReq = await fetch(`${API}/customers`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-accept: "application/json",
 access_token: process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
@@ -76,19 +65,12 @@ return res.status(400).json(cliente);
 }
 
 customerId = cliente.id;
-
 }
-
-
-// ==========================
-// CRIAR COBRANÇA PIX
-// ==========================
 
 const pagamentoReq = await fetch(`${API}/payments`, {
 method: "POST",
 headers: {
 "Content-Type": "application/json",
-accept: "application/json",
 access_token: process.env.ASAAS_API_KEY
 },
 body: JSON.stringify({
@@ -106,15 +88,8 @@ if (!pagamento.id) {
 return res.status(400).json(pagamento);
 }
 
-
-// ==========================
-// BUSCAR QR CODE PIX
-// ==========================
-
 const qrReq = await fetch(`${API}/payments/${pagamento.id}/pixQrCode`, {
-method: "GET",
 headers: {
-accept: "application/json",
 access_token: process.env.ASAAS_API_KEY
 }
 });
