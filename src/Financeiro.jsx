@@ -7,8 +7,6 @@ export default function Financeiro(){
 const [lancamentos,setLancamentos] = useState([]);
 const [empresaId,setEmpresaId] = useState(null);
 const [carregando,setCarregando] = useState(true);
-const [bloqueado,setBloqueado] = useState(false);
-
 const [pixAtual,setPixAtual] = useState(null);
 const [pixChave,setPixChave] = useState("");
 
@@ -21,29 +19,18 @@ carregarUsuario();
 
 async function carregarUsuario(){
 
-const { data:userData } = await supabase.auth.getUser();
-
-if(!userData?.user){
-setCarregando(false);
-return;
-}
+const { data:{ user } } = await supabase.auth.getUser();
 
 const { data:usuario } = await supabase
 .from("usuarios")
-.select("empresa_id, role")
-.eq("id",userData.user.id)
+.select("empresa_id")
+.eq("id",user.id)
 .single();
 
-if(usuario?.role === "admin"){
-setBloqueado(true);
-setCarregando(false);
-return;
-}
+setEmpresaId(usuario.empresa_id);
 
-setEmpresaId(usuario?.empresa_id);
-
-await buscarPix(usuario?.empresa_id);
-await carregarLancamentos(usuario?.empresa_id);
+await buscarPix(usuario.empresa_id);
+await carregarLancamentos(usuario.empresa_id);
 
 setCarregando(false);
 
@@ -60,9 +47,7 @@ const { data } = await supabase
 .eq("id",empId)
 .single();
 
-if(data?.pix_chave){
-setPixChave(data.pix_chave);
-}
+setPixChave(data?.pix_chave || "");
 
 }
 
@@ -110,15 +95,58 @@ return new Date(data).toLocaleDateString("pt-BR");
 }
 
 
-// ================= GERAR PAYLOAD PIX SIMPLES
+// ================= CRC16
+
+function crc16(payload){
+
+let polinomio = 0x1021;
+let resultado = 0xFFFF;
+
+for(let i=0;i<payload.length;i++){
+
+resultado ^= payload.charCodeAt(i) << 8;
+
+for(let j=0;j<8;j++){
+
+if((resultado <<= 1) & 0x10000){
+resultado ^= polinomio;
+}
+
+resultado &= 0xFFFF;
+
+}
+
+}
+
+return resultado.toString(16).toUpperCase().padStart(4,"0");
+
+}
+
+
+// ================= GERAR PIX OFICIAL
 
 function gerarPayload(valor){
 
-if(!pixChave) return "";
-
+const chave = pixChave;
 const valorFormatado = Number(valor).toFixed(2);
 
-return `pix:${pixChave}?amount=${valorFormatado}`;
+let payload =
+"000201" +
+"26360014BR.GOV.BCB.PIX01" +
+String(chave.length).padStart(2,"0") +
+chave +
+"52040000" +
+"5303986" +
+"54" + String(valorFormatado.length).padStart(2,"0") + valorFormatado +
+"5802BR" +
+"5913CUNHA FINANCE" +
+"6009SAO PAULO" +
+"62070503***" +
+"6304";
+
+payload += crc16(payload);
+
+return payload;
 
 }
 
@@ -126,20 +154,9 @@ return `pix:${pixChave}?amount=${valorFormatado}`;
 // ================= TELA
 
 if(carregando){
-return(
-<div style={{padding:20}}>
-<h2>Carregando...</h2>
-</div>
-);
+return <div style={{padding:20}}>Carregando...</div>
 }
 
-if(bloqueado){
-return(
-<div style={{padding:20}}>
-<h2>Painel financeiro apenas para empresas</h2>
-</div>
-);
-}
 
 return(
 
@@ -157,10 +174,10 @@ return(
 key={l.id}
 style={{
 border:"1px solid #333",
-background:"#111",
 padding:15,
 marginBottom:20,
-borderRadius:10
+borderRadius:10,
+background:"#111"
 }}
 >
 
@@ -191,9 +208,10 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
-💳 Gerar PIX
-</button>
 
+💳 Gerar PIX
+
+</button>
 
 <button
 onClick={()=>excluir(l.id)}
@@ -205,7 +223,9 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
+
 🗑 Excluir
+
 </button>
 
 
@@ -213,25 +233,23 @@ borderRadius:6
 
 <div
 style={{
-marginTop:15,
+marginTop:20,
 padding:15,
 background:"#0f172a",
-borderRadius:12,
-textAlign:"center",
-maxWidth:260,
-margin:"15px auto"
+borderRadius:10,
+textAlign:"center"
 }}
 >
 
 <h3>Pagamento PIX</h3>
 
-<p><b>Valor:</b> R$ {Number(l.valor).toFixed(2)}</p>
+<p>Valor: R$ {Number(l.valor).toFixed(2)}</p>
 
 <br/>
 
 <QRCodeCanvas
 value={payloadPix}
-size={170}
+size={180}
 />
 
 <br/><br/>
@@ -241,29 +259,26 @@ value={payloadPix}
 readOnly
 style={{
 width:"100%",
-height:60,
-borderRadius:6,
-padding:6,
-fontSize:11
+height:70,
+borderRadius:6
 }}
 />
 
 <br/><br/>
 
 <button
-onClick={()=>{
-navigator.clipboard.writeText(payloadPix);
-alert("PIX copiado!");
-}}
+onClick={()=>navigator.clipboard.writeText(payloadPix)}
 style={{
 background:"#22c55e",
 color:"#fff",
 border:"none",
-padding:"10px 18px",
-borderRadius:8
+padding:"10px 16px",
+borderRadius:6
 }}
 >
+
 📋 Copiar PIX
+
 </button>
 
 </div>
@@ -272,12 +287,12 @@ borderRadius:8
 
 </div>
 
-);
+)
 
 })}
 
 </div>
 
-);
+)
 
 }
