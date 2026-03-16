@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
+import { Pix } from "pix-payload";
 
 export default function Financeiro(){
 
@@ -17,11 +18,9 @@ carregarUsuario();
 },[]);
 
 
-// ================= CARREGAR USUARIO
+// ================= USUARIO
 
 async function carregarUsuario(){
-
-try{
 
 const { data:userData } = await supabase.auth.getUser();
 
@@ -36,23 +35,16 @@ const { data:usuario } = await supabase
 .eq("id",userData.user.id)
 .single();
 
-const empId = usuario?.empresa_id;
-const role = usuario?.role;
-
-if(role === "admin"){
+if(usuario?.role === "admin"){
 setBloqueado(true);
 setCarregando(false);
 return;
 }
 
-setEmpresaId(empId);
+setEmpresaId(usuario?.empresa_id);
 
-await buscarPix(empId);
-await carregarLancamentos(empId);
-
-}catch(err){
-console.log(err);
-}
+await buscarPix(usuario?.empresa_id);
+await carregarLancamentos(usuario?.empresa_id);
 
 setCarregando(false);
 
@@ -76,7 +68,7 @@ setPixChave(data.pix_chave);
 }
 
 
-// ================= CARREGAR LANCAMENTOS
+// ================= LANCAMENTOS
 
 async function carregarLancamentos(empId){
 
@@ -108,74 +100,35 @@ carregarLancamentos(empresaId);
 // ================= GERAR PIX
 
 function gerarPix(l){
+
 setPixAtual(l.id === pixAtual?.id ? null : l);
+
 }
 
 
 // ================= FORMATAR DATA
 
 function formatarData(data){
+
 return new Date(data).toLocaleDateString("pt-BR");
-}
-
-
-// ================= CRC16 (OBRIGATÓRIO NO PIX)
-
-function crc16(str){
-
-let crc = 0xFFFF;
-
-for (let c = 0; c < str.length; c++){
-
-crc ^= str.charCodeAt(c) << 8;
-
-for (let i = 0; i < 8; i++){
-
-if ((crc & 0x8000) !== 0){
-crc = (crc << 1) ^ 0x1021;
-}else{
-crc <<= 1;
-}
-
-crc &= 0xFFFF;
-
-}
-
-}
-
-return crc.toString(16).toUpperCase().padStart(4,"0");
 
 }
 
 
-// ================= GERAR PIX PADRÃO BACEN
+// ================= GERAR PAYLOAD PIX
 
-function gerarPayloadPix(valor){
+function gerarPayload(valor){
 
-const valorFormatado = Number(valor).toFixed(2);
+if(!pixChave) return "";
 
-let payload =
-"000201" +
-"26" +
-(14 + pixChave.length).toString().padStart(2,"0") +
-"0014BR.GOV.BCB.PIX" +
-"01" +
-pixChave.length.toString().padStart(2,"0") +
-pixChave +
-"52040000" +
-"5303986" +
-"54" +
-valorFormatado.length.toString().padStart(2,"0") +
-valorFormatado +
-"5802BR" +
-"5913CUNHA FINANCE" +
-"6009SAO PAULO" +
-"62070503***" +
-"6304";
+const pix = Pix({
+key: pixChave,
+name: "CUNHA FINANCE",
+city: "SAO PAULO",
+value: Number(valor)
+});
 
-payload += crc16(payload);
-
-return payload;
+return pix.payload();
 
 }
 
@@ -193,7 +146,7 @@ return(
 if(bloqueado){
 return(
 <div style={{padding:20}}>
-<h2>Painel financeiro apenas para empresas.</h2>
+<h2>Painel financeiro apenas para empresas</h2>
 </div>
 );
 }
@@ -207,14 +160,14 @@ return(
 
 {lancamentos.map(l=>{
 
-const payloadPix = gerarPayloadPix(l.valor);
+const payloadPix = gerarPayload(l.valor);
 
 return(
 
 <div
 key={l.id}
 style={{
-border:"1px solid #2c2c2c",
+border:"1px solid #333",
 background:"#111",
 padding:15,
 marginBottom:20,
@@ -270,8 +223,6 @@ borderRadius:6
 
 </button>
 
-
-{/* QR PIX */}
 
 {pixAtual?.id === l.id && (
 
