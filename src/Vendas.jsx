@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import { QRCodeCanvas } from "qrcode.react";
 
 export default function Vendas(){
 
@@ -11,7 +12,6 @@ const [clienteId,setClienteId] = useState("");
 const [clienteWhatsapp,setClienteWhatsapp] = useState("");
 
 const [produtoId,setProdutoId] = useState("");
-const [descricao,setDescricao] = useState("");
 
 const [quantidade,setQuantidade] = useState("");
 const [precoUnitario,setPrecoUnitario] = useState("");
@@ -20,37 +20,74 @@ const [parcelas,setParcelas] = useState(1);
 
 const [comissaoProduto,setComissaoProduto] = useState(0);
 
+const [pixEmpresa,setPixEmpresa] = useState("");
+
 const [dataVenda,setDataVenda] = useState(
 new Date().toISOString().split("T")[0]
 );
 
 const [empresaId,setEmpresaId] = useState(null);
-const [role,setRole] = useState("cliente");
 
 useEffect(()=>{
 buscarEmpresa();
 },[]);
 
 
+// ================= BUSCAR EMPRESA
+
 async function buscarEmpresa(){
 
 const { data:{ user } } = await supabase.auth.getUser();
+
 if(!user) return;
 
-const { data } = await supabase
+const { data,error } = await supabase
 .from("usuarios")
-.select("empresa_id, role")
+.select("empresa_id")
 .eq("id",user.id)
 .single();
 
-if(data){
+if(error){
+console.log("Erro usuario:",error);
+return;
+}
+
+if(!data?.empresa_id){
+console.log("Empresa não encontrada");
+return;
+}
+
 setEmpresaId(data.empresa_id);
-setRole(data.role || "cliente");
+
+buscarPix(data.empresa_id);
 buscarDados(data.empresa_id);
+
+}
+
+
+// ================= BUSCAR PIX
+
+async function buscarPix(empresa_id){
+
+const { data,error } = await supabase
+.from("empresas")
+.select("pix_chave")
+.eq("id",empresa_id)
+.single();
+
+if(error){
+console.log("Erro PIX:",error);
+return;
+}
+
+if(data?.pix_chave){
+setPixEmpresa(data.pix_chave);
 }
 
 }
 
+
+// ================= BUSCAR DADOS
 
 async function buscarDados(empresa_id){
 
@@ -78,6 +115,8 @@ setVendas(vendasData || []);
 }
 
 
+// ================= SELECIONAR PRODUTO
+
 function selecionarProduto(id){
 
 setProdutoId(id);
@@ -90,6 +129,8 @@ setComissaoProduto(Number(produto.comissao || 0));
 
 }
 
+
+// ================= SELECIONAR CLIENTE
 
 function selecionarCliente(id){
 
@@ -104,6 +145,8 @@ setClienteWhatsapp(cliente.whatsapp || "");
 }
 
 
+// ================= CALCULOS
+
 const qtd = parseFloat(quantidade) || 0;
 const preco = parseFloat(precoUnitario) || 0;
 
@@ -111,9 +154,8 @@ const valorTotal = preco * qtd;
 
 const valorParcela = parcelas > 0 ? valorTotal / parcelas : valorTotal;
 
-const comissao = qtd * comissaoProduto;
 
-
+// ================= SALVAR VENDA
 
 async function salvarVenda(){
 
@@ -122,21 +164,19 @@ alert("Empresa não carregada");
 return;
 }
 
+if(!clienteId){
+alert("Selecione um cliente");
+return;
+}
+
 if(qtd <= 0){
 alert("Quantidade inválida");
 return;
 }
 
-const produto = produtos.find(p=>p.id == produtoId);
-
 const { data:{ user } } = await supabase.auth.getUser();
 
-const material = role==="admin"
-? produto?.nome
-: descricao;
-
-
-const { data:vendaSalva , error } = await supabase
+const { error } = await supabase
 .from("vendas")
 .insert([{
 empresa_id:empresaId,
@@ -145,14 +185,9 @@ produto_id:produtoId || null,
 kilos:qtd,
 preco_unitario:preco,
 valor_total:valorTotal,
-comissao: role==="admin" ? comissao : 0,
 data_venda:dataVenda,
-material,
 user_id:user.id
-}])
-.select()
-.single();
-
+}]);
 
 if(error){
 console.log(error);
@@ -160,39 +195,10 @@ alert("Erro ao salvar venda");
 return;
 }
 
-
-// GERAR PARCELAS
-
-for(let i=0;i<parcelas;i++){
-
-let dataParcela = new Date(dataVenda);
-
-dataParcela.setMonth(dataParcela.getMonth()+i);
-
-let mes = dataParcela.getMonth()+1;
-let ano = dataParcela.getFullYear();
-
-await supabase
-.from("lancamentos")
-.insert([{
-empresa_id:empresaId,
-tipo:"receita",
-descricao: material + (parcelas>1 ? ` (${i+1}/${parcelas})` : ""),
-valor:valorParcela,
-venda_id:vendaSalva.id,
-mes,
-ano,
-status:"pendente"
-}]);
-
-}
-
-
 alert("Venda registrada!");
 
 setQuantidade("");
 setPrecoUnitario("");
-setDescricao("");
 setParcelas(1);
 
 buscarDados(empresaId);
@@ -200,6 +206,7 @@ buscarDados(empresaId);
 }
 
 
+// ================= WHATSAPP
 
 function enviarWhatsapp(venda){
 
@@ -211,9 +218,7 @@ return;
 const mensagem = encodeURIComponent(
 `Olá!
 
-Parcela referente a compra:
-
-${venda.material}
+Compra registrada:
 
 Valor: R$ ${Number(venda.valor_total).toFixed(2)}
 
@@ -225,16 +230,16 @@ window.open(`https://wa.me/55${clienteWhatsapp}?text=${mensagem}`);
 }
 
 
+// ================= FORMATAR DATA
 
 function formatarData(data){
-
-if(!data) return "";
 
 return new Date(data).toLocaleDateString("pt-BR");
 
 }
 
 
+// ================= TELA
 
 return(
 
@@ -318,7 +323,7 @@ min="1"
 
 <br/><br/>
 
-<div style={{marginBottom:15}}>
+<div style={{marginBottom:20}}>
 
 <strong>Total:</strong> R$ {valorTotal.toFixed(2)}
 
@@ -328,6 +333,52 @@ min="1"
 
 </div>
 
+
+{/* PIX */}
+
+{pixEmpresa && (
+
+<div style={{textAlign:"center",marginBottom:20}}>
+
+<h3>Pagamento via PIX</h3>
+
+<input
+value={pixEmpresa}
+readOnly
+style={{
+padding:"10px",
+width:"300px",
+textAlign:"center"
+}}
+/>
+
+<br/><br/>
+
+<QRCodeCanvas
+value={pixEmpresa}
+size={200}
+/>
+
+<br/><br/>
+
+<button
+onClick={()=>navigator.clipboard.writeText(pixEmpresa)}
+style={{
+background:"#16a34a",
+color:"#fff",
+border:"none",
+padding:"8px 16px",
+borderRadius:"6px"
+}}
+>
+
+Copiar chave PIX
+
+</button>
+
+</div>
+
+)}
 
 <button onClick={salvarVenda}>
 Salvar Venda
@@ -350,10 +401,6 @@ marginBottom:10
 >
 
 📅 {formatarData(v.data_venda)}
-
-<br/>
-
-{v.material}
 
 <br/>
 

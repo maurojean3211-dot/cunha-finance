@@ -5,6 +5,8 @@ export default function Financeiro(){
 
 const [lancamentos,setLancamentos] = useState([]);
 const [empresaId,setEmpresaId] = useState(null);
+const [carregando,setCarregando] = useState(true);
+const [bloqueado,setBloqueado] = useState(false);
 
 // ================= CARREGAR USUARIO
 
@@ -14,28 +16,57 @@ carregarUsuario();
 
 async function carregarUsuario(){
 
+try{
+
 const { data:userData } = await supabase.auth.getUser();
 
-if(!userData?.user) return;
+if(!userData?.user){
+console.warn("Usuário não logado");
+setCarregando(false);
+return;
+}
 
 const { data:usuario, error } = await supabase
 .from("usuarios")
-.select("empresa_id")
+.select("empresa_id, role")
 .eq("id",userData.user.id)
 .single();
 
 if(error){
 console.log("Erro usuario:",error);
+setCarregando(false);
 return;
 }
 
 const empId = usuario?.empresa_id;
+const role = usuario?.role;
 
-if(!empId) return;
+// ===== BLOQUEAR ADMIN
+
+if(role === "admin"){
+console.warn("Admin não acessa financeiro");
+setBloqueado(true);
+setCarregando(false);
+return;
+}
+
+if(!empId){
+console.warn("Empresa não vinculada ao usuário");
+setCarregando(false);
+return;
+}
 
 setEmpresaId(empId);
 
-carregarLancamentos(empId);
+await carregarLancamentos(empId);
+
+}catch(err){
+
+console.log("Erro carregar usuario:",err);
+
+}
+
+setCarregando(false);
 
 }
 
@@ -87,7 +118,7 @@ carregarLancamentos(empresaId);
 async function gerarPix(l){
 
 if(!empresaId){
-alert("Empresa não carregada");
+console.warn("Empresa ainda não carregada");
 return;
 }
 
@@ -113,22 +144,13 @@ console.log("PIX criado:",data);
 // ===== ERRO ASAAS
 
 if(data?.errors){
-alert("Erro ASAAS:\n\n"+JSON.stringify(data.errors));
+alert("Erro ASAAS:\n\n"+JSON.stringify(data.errors,null,2));
 return;
 }
 
 if(data?.erro){
-alert("Erro:\n\n"+JSON.stringify(data));
+alert("Erro:\n\n"+JSON.stringify(data,null,2));
 return;
-}
-
-// ===== PIX COPIA E COLA
-
-if(data?.pixCopiaECola){
-
-alert("PIX gerado!\n\nCopie o código:\n\n"+data.pixCopiaECola);
-return;
-
 }
 
 // ===== QR CODE
@@ -145,7 +167,16 @@ return;
 
 }
 
-alert("PIX gerado mas sem retorno esperado");
+// ===== PIX COPIA E COLA
+
+if(data?.pixCopiaECola){
+
+alert("PIX gerado!\n\nCopie o código:\n\n"+data.pixCopiaECola);
+return;
+
+}
+
+alert("PIX gerado mas QR Code não retornou");
 
 }catch(err){
 
@@ -166,6 +197,26 @@ return new Date(data).toLocaleDateString("pt-BR");
 
 }
 
+// ================= TELA CARREGANDO
+
+if(carregando){
+return(
+<div style={{padding:20}}>
+<h2>Carregando dados da empresa...</h2>
+</div>
+);
+}
+
+// ================= BLOQUEIO ADMIN
+
+if(bloqueado){
+return(
+<div style={{padding:20}}>
+<h2>Painel financeiro disponível apenas para empresas.</h2>
+</div>
+);
+}
+
 // ================= TELA
 
 return(
@@ -173,6 +224,10 @@ return(
 <div style={{padding:20}}>
 
 <h1>💰 Financeiro</h1>
+
+{lancamentos.length === 0 && (
+<p>Nenhum lançamento encontrado.</p>
+)}
 
 {lancamentos.map(l=>(
 

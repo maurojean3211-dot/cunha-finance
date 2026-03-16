@@ -15,7 +15,6 @@ CartesianGrid
 
 export default function Dashboard(){
 
-const [lancamentos,setLancamentos] = useState([]);
 const [receitas,setReceitas] = useState(0);
 const [despesas,setDespesas] = useState(0);
 const [saldo,setSaldo] = useState(0);
@@ -23,7 +22,7 @@ const [saldo,setSaldo] = useState(0);
 const [dadosGrafico,setDadosGrafico] = useState([]);
 const [dadosMes,setDadosMes] = useState([]);
 
-const [empresaId,setEmpresaId] = useState(null);
+const [carregando,setCarregando] = useState(true);
 
 useEffect(()=>{
 iniciar();
@@ -31,28 +30,71 @@ iniciar();
 
 async function iniciar(){
 
+try{
+
 const { data:{ user } } = await supabase.auth.getUser();
-if(!user) return;
 
-// buscar empresa do usuário pelo ID
-const { data:usuario } = await supabase
-.from("usuarios")
-.select("empresa_id")
-.eq("id",user.id)
-.single();
-
-if(!usuario?.empresa_id){
-console.log("Empresa não encontrada");
+if(!user){
+setCarregando(false);
 return;
 }
 
-setEmpresaId(usuario.empresa_id);
+// buscar usuario
+const { data:usuario,error } = await supabase
+.from("usuarios")
+.select("empresa_id, role")
+.eq("id",user.id)
+.single();
 
-await carregarDados(usuario.empresa_id);
+if(error){
+console.log("Erro usuario:",error);
+setCarregando(false);
+return;
+}
+
+// ===== ADMIN NÃO VÊ FINANCEIRO
+
+if(usuario?.role === "admin"){
+
+setReceitas(0);
+setDespesas(0);
+setSaldo(0);
+
+setDadosGrafico([
+{ name:"Receitas", value:0 },
+{ name:"Despesas", value:0 }
+]);
+
+setDadosMes([]);
+
+setCarregando(false);
+return;
+
+}
+
+const empresaId = usuario?.empresa_id;
+
+if(!empresaId){
+console.log("Empresa não encontrada");
+setCarregando(false);
+return;
+}
+
+await carregarDados(empresaId);
+
+}catch(err){
+
+console.log("Erro iniciar dashboard:",err);
+
+}
+
+setCarregando(false);
 
 }
 
 async function carregarDados(empresa_id){
+
+try{
 
 const {data,error} = await supabase
 .from("lancamentos")
@@ -60,14 +102,17 @@ const {data,error} = await supabase
 .eq("empresa_id",empresa_id);
 
 if(error){
-console.log(error);
+console.log("Erro lancamentos:",error);
 return;
 }
 
-const lista = data || [];
+calcularDados(data || []);
 
-setLancamentos(lista);
-calcularDados(lista);
+}catch(err){
+
+console.log("Erro carregar dados:",err);
+
+}
 
 }
 
@@ -100,7 +145,7 @@ setDadosGrafico([
 { name:"Despesas", value:totalDespesa }
 ]);
 
-// ===== GRÁFICO MENSAL =====
+// ===== GRÁFICO MENSAL
 
 const meses={};
 
@@ -148,6 +193,14 @@ setDadosMes(dadosLinha);
 }
 
 const cores=["#22c55e","#ef4444"];
+
+if(carregando){
+return(
+<div style={{padding:30,color:"#fff"}}>
+<h2>Carregando Dashboard...</h2>
+</div>
+);
+}
 
 return(
 
