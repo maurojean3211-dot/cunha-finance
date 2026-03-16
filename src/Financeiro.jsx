@@ -113,80 +113,6 @@ carregarLancamentos(empresaId);
 
 }
 
-// ================= GERAR PIX
-
-async function gerarPix(l){
-
-if(!empresaId){
-console.warn("Empresa ainda não carregada");
-return;
-}
-
-try{
-
-const response = await fetch("/api/pix",{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-nome:"Cliente Cunha Finance",
-cpf:"00307549682",
-valor:Number(l.valor || 0),
-descricao:l.descricao || "Pagamento"
-})
-});
-
-const data = await response.json();
-
-console.log("PIX criado:",data);
-
-// ===== ERRO ASAAS
-
-if(data?.errors){
-alert("Erro ASAAS:\n\n"+JSON.stringify(data.errors,null,2));
-return;
-}
-
-if(data?.erro){
-alert("Erro:\n\n"+JSON.stringify(data,null,2));
-return;
-}
-
-// ===== QR CODE
-
-if(data?.qrCode){
-
-const img = window.open("");
-
-if(img){
-img.document.write("<img style='width:300px' src='data:image/png;base64,"+data.qrCode+"' />");
-}
-
-return;
-
-}
-
-// ===== PIX COPIA E COLA
-
-if(data?.pixCopiaECola){
-
-alert("PIX gerado!\n\nCopie o código:\n\n"+data.pixCopiaECola);
-return;
-
-}
-
-alert("PIX gerado mas QR Code não retornou");
-
-}catch(err){
-
-console.log("Erro PIX:",err);
-alert("Erro ao gerar PIX");
-
-}
-
-}
-
 // ================= FORMATAR DATA
 
 function formatarData(data){
@@ -201,6 +127,7 @@ return new Date(data).toLocaleDateString("pt-BR");
 
 if(carregando){
 return(
+
 <div style={{padding:20}}>
 <h2>Carregando dados da empresa...</h2>
 </div>
@@ -211,6 +138,7 @@ return(
 
 if(bloqueado){
 return(
+
 <div style={{padding:20}}>
 <h2>Painel financeiro disponível apenas para empresas.</h2>
 </div>
@@ -226,6 +154,7 @@ return(
 <h1>💰 Financeiro</h1>
 
 {lancamentos.length === 0 && (
+
 <p>Nenhum lançamento encontrado.</p>
 )}
 
@@ -257,24 +186,8 @@ borderRadius:6
 
 <br/><br/>
 
-<button
-onClick={()=>gerarPix(l)}
-style={{
-marginRight:10,
-background:"#10b981",
-color:"#fff",
-border:"none",
-padding:"6px 10px",
-borderRadius:4,
-cursor:"pointer"
-}}
->
-💳 Gerar PIX
-</button>
-
 <button onClick={()=>excluir(l.id)}>
-🗑 Excluir
-</button>
+🗑 Excluir </button>
 
 </div>
 
