@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
-import { Pix } from "pix-payload";
 
 export default function Financeiro(){
 
@@ -115,20 +114,68 @@ return new Date(data).toLocaleDateString("pt-BR");
 }
 
 
+// ================= CRC16
+
+function crc16(str){
+
+let crc = 0xFFFF;
+
+for (let c = 0; c < str.length; c++){
+
+crc ^= str.charCodeAt(c) << 8;
+
+for (let i = 0; i < 8; i++){
+
+if ((crc & 0x8000) !== 0){
+crc = (crc << 1) ^ 0x1021;
+}else{
+crc <<= 1;
+}
+
+crc &= 0xFFFF;
+
+}
+
+}
+
+return crc.toString(16).toUpperCase().padStart(4,"0");
+
+}
+
+
 // ================= GERAR PAYLOAD PIX
 
 function gerarPayload(valor){
 
 if(!pixChave) return "";
 
-const pix = Pix({
-key: pixChave,
-name: "CUNHA FINANCE",
-city: "SAO PAULO",
-value: Number(valor)
-});
+const chave = pixChave.trim();
+const valorFormatado = Number(valor).toFixed(2);
 
-return pix.payload();
+const merchantAccount =
+"0014BR.GOV.BCB.PIX" +
+"01" +
+String(chave.length).padStart(2,"0") +
+chave;
+
+const merchantAccountLength =
+String(merchantAccount.length).padStart(2,"0");
+
+let payload =
+"000201" +
+"26" + merchantAccountLength + merchantAccount +
+"52040000" +
+"5303986" +
+"54" + String(valorFormatado.length).padStart(2,"0") + valorFormatado +
+"5802BR" +
+"5910CUNHAFIN" +
+"6009SAOPAULO" +
+"62070503***" +
+"6304";
+
+payload += crc16(payload);
+
+return payload;
 
 }
 
