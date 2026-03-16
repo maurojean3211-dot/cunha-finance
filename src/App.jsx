@@ -8,6 +8,7 @@ import MasterAdmin from "./MasterAdmin";
 import Financeiro from "./Financeiro.jsx";
 import Lucro from "./Lucro.jsx";
 import DespesasPessoais from "./DespesasPessoais.jsx";
+import Pix from "./Pix.jsx";
 
 export default function App(){
 
@@ -145,52 +146,53 @@ flexDirection:"column"
 <button
 onClick={()=>setPagina("dashboard")}
 style={pagina==="dashboard" ? botaoAtivo : botaoMenu}
-
 >
-
-📊 Dashboard </button>
+📊 Dashboard
+</button>
 
 <button
 onClick={()=>setPagina("financeiro")}
 style={pagina==="financeiro" ? botaoAtivo : botaoMenu}
-
 >
-
-💰 Financeiro </button>
+💰 Financeiro
+</button>
 
 <button
 onClick={()=>setPagina("lucro")}
 style={pagina==="lucro" ? botaoAtivo : botaoMenu}
-
 >
-
-📈 Lucro </button>
+📈 Lucro
+</button>
 
 <button
 onClick={()=>setPagina("despesas")}
 style={pagina==="despesas" ? botaoAtivo : botaoMenu}
-
 >
+💳 Pessoal
+</button>
 
-💳 Pessoal </button>
+<button
+onClick={()=>setPagina("pix")}
+style={pagina==="pix" ? botaoAtivo : botaoMenu}
+>
+📱 PIX
+</button>
 
 <button
 onClick={()=>setPagina("admin")}
 style={pagina==="admin" ? botaoAtivo : botaoMenu}
-
 >
-
-⚙ Sistema </button>
+⚙ Sistema
+</button>
 
 {role === "admin" && (
 
 <button
 onClick={()=>setPagina("master")}
 style={pagina==="master" ? botaoAtivo : botaoMenu}
-
 >
-
-👑 Master Admin </button>
+👑 Master Admin
+</button>
 
 )}
 
@@ -202,10 +204,9 @@ style={{
 ...botaoMenu,
 background:"#ef4444"
 }}
-
 >
-
-🚪 Sair </button>
+🚪 Sair
+</button>
 
 </div>
 
@@ -222,6 +223,8 @@ background:"#ef4444"
 {pagina==="lucro" && <Lucro />}
 
 {pagina==="despesas" && <DespesasPessoais />}
+
+{pagina==="pix" && <Pix />}
 
 {pagina==="admin" && <Admin />}
 
