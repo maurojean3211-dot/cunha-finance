@@ -51,9 +51,7 @@ await buscarPix(empId);
 await carregarLancamentos(empId);
 
 }catch(err){
-
 console.log(err);
-
 }
 
 setCarregando(false);
@@ -121,25 +119,61 @@ return new Date(data).toLocaleDateString("pt-BR");
 }
 
 
-// ================= GERAR PAYLOAD PIX REAL
+// ================= CRC16 (OBRIGATÓRIO NO PIX)
+
+function crc16(str){
+
+let crc = 0xFFFF;
+
+for (let c = 0; c < str.length; c++){
+
+crc ^= str.charCodeAt(c) << 8;
+
+for (let i = 0; i < 8; i++){
+
+if ((crc & 0x8000) !== 0){
+crc = (crc << 1) ^ 0x1021;
+}else{
+crc <<= 1;
+}
+
+crc &= 0xFFFF;
+
+}
+
+}
+
+return crc.toString(16).toUpperCase().padStart(4,"0");
+
+}
+
+
+// ================= GERAR PIX PADRÃO BACEN
 
 function gerarPayloadPix(valor){
 
-const valorFormatado = Number(valor).toFixed(2).replace(".", "");
+const valorFormatado = Number(valor).toFixed(2);
 
-const payload =
+let payload =
 "000201" +
-"26330014BR.GOV.BCB.PIX01" +
+"26" +
+(14 + pixChave.length).toString().padStart(2,"0") +
+"0014BR.GOV.BCB.PIX" +
+"01" +
 pixChave.length.toString().padStart(2,"0") +
 pixChave +
 "52040000" +
 "5303986" +
-"54" + valorFormatado.length.toString().padStart(2,"0") + valorFormatado +
+"54" +
+valorFormatado.length.toString().padStart(2,"0") +
+valorFormatado +
 "5802BR" +
 "5913CUNHA FINANCE" +
 "6009SAO PAULO" +
 "62070503***" +
 "6304";
+
+payload += crc16(payload);
 
 return payload;
 
@@ -171,7 +205,6 @@ return(
 
 <h1>💰 Financeiro</h1>
 
-
 {lancamentos.map(l=>{
 
 const payloadPix = gerarPayloadPix(l.valor);
@@ -189,7 +222,7 @@ borderRadius:10
 }}
 >
 
-<strong style={{fontSize:16}}>{l.tipo}</strong>
+<strong>{l.tipo}</strong>
 
 <br/>
 
@@ -213,8 +246,7 @@ background:"#16a34a",
 color:"#fff",
 border:"none",
 padding:"8px 14px",
-borderRadius:6,
-cursor:"pointer"
+borderRadius:6
 }}
 >
 
@@ -239,7 +271,7 @@ borderRadius:6
 </button>
 
 
-{/* PIX ABAIXO DA VENDA */}
+{/* QR PIX */}
 
 {pixAtual?.id === l.id && (
 
@@ -259,8 +291,6 @@ margin:"15px auto"
 
 <p><b>Valor:</b> R$ {Number(l.valor).toFixed(2)}</p>
 
-<p style={{fontSize:12}}><b>Chave:</b> {pixChave}</p>
-
 <br/>
 
 <QRCodeCanvas
@@ -277,8 +307,7 @@ background:"#22c55e",
 color:"#fff",
 border:"none",
 padding:"10px 18px",
-borderRadius:8,
-cursor:"pointer"
+borderRadius:8
 }}
 >
 
