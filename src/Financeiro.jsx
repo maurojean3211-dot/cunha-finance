@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import { QRCodeCanvas } from "qrcode.react";
 
 export default function Financeiro(){
 
@@ -7,6 +8,9 @@ const [lancamentos,setLancamentos] = useState([]);
 const [empresaId,setEmpresaId] = useState(null);
 const [carregando,setCarregando] = useState(true);
 const [bloqueado,setBloqueado] = useState(false);
+
+const [pixAtual,setPixAtual] = useState(null);
+const [pixChave,setPixChave] = useState("");
 
 // ================= CARREGAR USUARIO
 
@@ -21,7 +25,6 @@ try{
 const { data:userData } = await supabase.auth.getUser();
 
 if(!userData?.user){
-console.warn("Usuário não logado");
 setCarregando(false);
 return;
 }
@@ -41,32 +44,45 @@ return;
 const empId = usuario?.empresa_id;
 const role = usuario?.role;
 
-// ===== BLOQUEAR ADMIN
-
 if(role === "admin"){
-console.warn("Admin não acessa financeiro");
 setBloqueado(true);
 setCarregando(false);
 return;
 }
 
 if(!empId){
-console.warn("Empresa não vinculada ao usuário");
 setCarregando(false);
 return;
 }
 
 setEmpresaId(empId);
 
+await buscarPix(empId);
 await carregarLancamentos(empId);
 
 }catch(err){
 
-console.log("Erro carregar usuario:",err);
+console.log(err);
 
 }
 
 setCarregando(false);
+
+}
+
+// ================= BUSCAR PIX DA EMPRESA
+
+async function buscarPix(empId){
+
+const { data } = await supabase
+.from("empresas")
+.select("pix_chave")
+.eq("id",empId)
+.single();
+
+if(data?.pix_chave){
+setPixChave(data.pix_chave);
+}
 
 }
 
@@ -83,7 +99,7 @@ const { data, error } = await supabase
 .order("data_lancamento",{ascending:false});
 
 if(error){
-console.log("Erro lancamentos:",error);
+console.log(error);
 return;
 }
 
@@ -113,6 +129,14 @@ carregarLancamentos(empresaId);
 
 }
 
+// ================= GERAR PIX
+
+function gerarPix(l){
+
+setPixAtual(l);
+
+}
+
 // ================= FORMATAR DATA
 
 function formatarData(data){
@@ -122,6 +146,12 @@ if(!data) return "";
 return new Date(data).toLocaleDateString("pt-BR");
 
 }
+
+// ================= TEXTO PIX
+
+const textoPix = pixAtual
+? `PIX\nChave:${pixChave}\nValor:${Number(pixAtual.valor).toFixed(2)}`
+: "";
 
 // ================= TELA CARREGANDO
 
@@ -186,12 +216,66 @@ borderRadius:6
 
 <br/><br/>
 
+<button
+onClick={()=>gerarPix(l)}
+style={{
+marginRight:10,
+background:"#16a34a",
+color:"#fff",
+border:"none",
+padding:"6px 10px",
+borderRadius:6
+}}
+
+>
+
+💳 Gerar PIX </button>
+
 <button onClick={()=>excluir(l.id)}>
 🗑 Excluir </button>
 
 </div>
 
 ))}
+
+{/* PIX */}
+
+{pixAtual && (
+
+<div style={{textAlign:"center",marginTop:30}}>
+
+<h2>Pagamento PIX</h2>
+
+<p><strong>Valor:</strong> R$ {Number(pixAtual.valor).toFixed(2)}</p>
+
+<p><strong>Chave PIX:</strong> {pixChave}</p>
+
+<br/>
+
+<QRCodeCanvas
+value={textoPix}
+size={240}
+/>
+
+<br/><br/>
+
+<button
+onClick={()=>navigator.clipboard.writeText(pixChave)}
+style={{
+background:"#10b981",
+color:"#fff",
+border:"none",
+padding:"8px 16px",
+borderRadius:6
+}}
+
+>
+
+Copiar chave PIX </button>
+
+</div>
+
+)}
 
 </div>
 

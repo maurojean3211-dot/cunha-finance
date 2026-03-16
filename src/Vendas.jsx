@@ -30,7 +30,6 @@ useEffect(()=>{
 buscarEmpresa();
 },[]);
 
-
 // ================= BUSCAR EMPRESA
 
 async function buscarEmpresa(){
@@ -62,7 +61,6 @@ buscarDados(data.empresa_id);
 
 }
 
-
 // ================= BUSCAR PIX
 
 async function buscarPix(empresa_id){
@@ -83,7 +81,6 @@ setPixEmpresa(data.pix_chave || "");
 }
 
 }
-
 
 // ================= BUSCAR DADOS
 
@@ -112,15 +109,11 @@ setVendas(vendasData || []);
 
 }
 
-
 // ================= SELECIONAR PRODUTO
 
 function selecionarProduto(id){
-
 setProdutoId(id);
-
 }
-
 
 // ================= SELECIONAR CLIENTE
 
@@ -136,7 +129,6 @@ setClienteWhatsapp(cliente.whatsapp || "");
 
 }
 
-
 // ================= CALCULOS
 
 const qtd = parseFloat(quantidade) || 0;
@@ -146,6 +138,11 @@ const valorTotal = preco * qtd;
 
 const valorParcela = parcelas > 0 ? valorTotal / parcelas : valorTotal;
 
+// ================= TEXTO PIX PARA QR CODE
+
+const textoPix = pixEmpresa && valorTotal > 0
+? `PIX\nChave:${pixEmpresa}\nValor:${valorTotal.toFixed(2)}`
+: "";
 
 // ================= SALVAR VENDA
 
@@ -197,7 +194,6 @@ buscarDados(empresaId);
 
 }
 
-
 // ================= WHATSAPP
 
 function enviarWhatsapp(venda){
@@ -222,15 +218,11 @@ window.open(`https://wa.me/55${clienteWhatsapp}?text=${mensagem}`);
 
 }
 
-
 // ================= FORMATAR DATA
 
 function formatarData(data){
-
 return new Date(data).toLocaleDateString("pt-BR");
-
 }
-
 
 // ================= TELA
 
@@ -253,18 +245,13 @@ onChange={e=>setDataVenda(e.target.value)}
 <select
 value={clienteId}
 onChange={e=>selecionarCliente(e.target.value)}
+
 >
 
 <option value="">Cliente</option>
-
 {clientes.map(c=>(
-
-<option key={c.id} value={c.id}>
-{c.nome}
-</option>
-
+<option key={c.id} value={c.id}>{c.nome}</option>
 ))}
-
 </select>
 
 <br/><br/>
@@ -272,18 +259,13 @@ onChange={e=>selecionarCliente(e.target.value)}
 <select
 value={produtoId}
 onChange={e=>selecionarProduto(e.target.value)}
+
 >
 
 <option value="">Produto</option>
-
 {produtos.map(p=>(
-
-<option key={p.id} value={p.id}>
-{p.nome}
-</option>
-
+<option key={p.id} value={p.id}>{p.nome}</option>
 ))}
-
 </select>
 
 <br/><br/>
@@ -317,15 +299,10 @@ min="1"
 <br/><br/>
 
 <div style={{marginBottom:20}}>
-
 <strong>Total:</strong> R$ {valorTotal.toFixed(2)}
-
 <br/>
-
 <strong>Valor da parcela:</strong> R$ {valorParcela.toFixed(2)}
-
 </div>
-
 
 {/* PIX */}
 
@@ -345,11 +322,11 @@ textAlign:"center"
 
 <br/><br/>
 
-{pixEmpresa && (
+{textoPix && (
 
 <QRCodeCanvas
-value={pixEmpresa}
-size={200}
+value={textoPix}
+size={220}
 />
 
 )}
@@ -365,11 +342,10 @@ border:"none",
 padding:"8px 16px",
 borderRadius:"6px"
 }}
+
 >
 
-Copiar chave PIX
-
-</button>
+Copiar chave PIX </button>
 
 </div>
 
@@ -410,11 +386,10 @@ color:"#fff",
 border:"none",
 padding:"6px 12px"
 }}
+
 >
 
-📲 Enviar WhatsApp
-
-</button>
+📲 Enviar WhatsApp </button>
 
 </div>
 
