@@ -18,8 +18,6 @@ const [precoUnitario,setPrecoUnitario] = useState("");
 
 const [parcelas,setParcelas] = useState(1);
 
-const [comissaoProduto,setComissaoProduto] = useState(0);
-
 const [pixEmpresa,setPixEmpresa] = useState("");
 
 const [dataVenda,setDataVenda] = useState(
@@ -80,8 +78,8 @@ console.log("Erro PIX:",error);
 return;
 }
 
-if(data?.pix_chave){
-setPixEmpresa(data.pix_chave);
+if(data){
+setPixEmpresa(data.pix_chave || "");
 }
 
 }
@@ -120,12 +118,6 @@ setVendas(vendasData || []);
 function selecionarProduto(id){
 
 setProdutoId(id);
-
-const produto = produtos.find(p=>p.id == id);
-
-if(produto){
-setComissaoProduto(Number(produto.comissao || 0));
-}
 
 }
 
@@ -218,11 +210,12 @@ return;
 const mensagem = encodeURIComponent(
 `Olá!
 
-Compra registrada:
+Compra registrada no sistema Cunha Finance.
 
 Valor: R$ ${Number(venda.valor_total).toFixed(2)}
 
-Sistema Cunha Finance`
+Pagamento via PIX:
+${pixEmpresa}`
 );
 
 window.open(`https://wa.me/55${clienteWhatsapp}?text=${mensagem}`);
@@ -336,14 +329,12 @@ min="1"
 
 {/* PIX */}
 
-{pixEmpresa && (
-
 <div style={{textAlign:"center",marginBottom:20}}>
 
 <h3>Pagamento via PIX</h3>
 
 <input
-value={pixEmpresa}
+value={pixEmpresa || "Chave PIX não cadastrada"}
 readOnly
 style={{
 padding:"10px",
@@ -354,10 +345,14 @@ textAlign:"center"
 
 <br/><br/>
 
+{pixEmpresa && (
+
 <QRCodeCanvas
 value={pixEmpresa}
 size={200}
 />
+
+)}
 
 <br/><br/>
 
@@ -377,8 +372,6 @@ Copiar chave PIX
 </button>
 
 </div>
-
-)}
 
 <button onClick={salvarVenda}>
 Salvar Venda
