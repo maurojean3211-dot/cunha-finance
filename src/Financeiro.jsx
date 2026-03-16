@@ -84,69 +84,17 @@ carregarLancamentos(empresaId);
 // ================= GERAR PIX
 
 function gerarPix(l){
+
 setPixAtual(l.id === pixAtual?.id ? null : l);
+
 }
 
 
 // ================= FORMATAR DATA
 
 function formatarData(data){
+
 return new Date(data).toLocaleDateString("pt-BR");
-}
-
-
-// ================= CRC16
-
-function crc16(payload){
-
-let polinomio = 0x1021;
-let resultado = 0xFFFF;
-
-for(let i=0;i<payload.length;i++){
-
-resultado ^= payload.charCodeAt(i) << 8;
-
-for(let j=0;j<8;j++){
-
-if((resultado <<= 1) & 0x10000){
-resultado ^= polinomio;
-}
-
-resultado &= 0xFFFF;
-
-}
-
-}
-
-return resultado.toString(16).toUpperCase().padStart(4,"0");
-
-}
-
-
-// ================= GERAR PIX OFICIAL
-
-function gerarPayload(valor){
-
-const chave = pixChave;
-const valorFormatado = Number(valor).toFixed(2);
-
-let payload =
-"000201" +
-"26360014BR.GOV.BCB.PIX01" +
-String(chave.length).padStart(2,"0") +
-chave +
-"52040000" +
-"5303986" +
-"54" + String(valorFormatado.length).padStart(2,"0") + valorFormatado +
-"5802BR" +
-"5913CUNHA FINANCE" +
-"6009SAO PAULO" +
-"62070503***" +
-"6304";
-
-payload += crc16(payload);
-
-return payload;
 
 }
 
@@ -154,7 +102,9 @@ return payload;
 // ================= TELA
 
 if(carregando){
+
 return <div style={{padding:20}}>Carregando...</div>
+
 }
 
 
@@ -165,8 +115,6 @@ return(
 <h1>💰 Financeiro</h1>
 
 {lancamentos.map(l=>{
-
-const payloadPix = gerarPayload(l.valor);
 
 return(
 
@@ -245,29 +193,29 @@ textAlign:"center"
 
 <p>Valor: R$ {Number(l.valor).toFixed(2)}</p>
 
-<br/>
-
-<QRCodeCanvas
-value={payloadPix}
-size={180}
-/>
-
-<br/><br/>
+<p>Chave PIX:</p>
 
 <textarea
-value={payloadPix}
+value={pixChave}
 readOnly
 style={{
 width:"100%",
-height:70,
+height:50,
 borderRadius:6
 }}
 />
 
 <br/><br/>
 
+<QRCodeCanvas
+value={pixChave}
+size={180}
+/>
+
+<br/><br/>
+
 <button
-onClick={()=>navigator.clipboard.writeText(payloadPix)}
+onClick={()=>navigator.clipboard.writeText(pixChave)}
 style={{
 background:"#22c55e",
 color:"#fff",
@@ -277,7 +225,7 @@ borderRadius:6
 }}
 >
 
-📋 Copiar PIX
+📋 Copiar chave PIX
 
 </button>
 
