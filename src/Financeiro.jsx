@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
-import { Pix } from "pix-payload";
 
 export default function Financeiro(){
 
@@ -100,35 +99,26 @@ carregarLancamentos(empresaId);
 // ================= GERAR PIX
 
 function gerarPix(l){
-
 setPixAtual(l.id === pixAtual?.id ? null : l);
-
 }
 
 
 // ================= FORMATAR DATA
 
 function formatarData(data){
-
 return new Date(data).toLocaleDateString("pt-BR");
-
 }
 
 
-// ================= GERAR PAYLOAD PIX
+// ================= GERAR PAYLOAD PIX SIMPLES
 
 function gerarPayload(valor){
 
 if(!pixChave) return "";
 
-const pix = Pix({
-key: pixChave,
-name: "CUNHA FINANCE",
-city: "SAO PAULO",
-value: Number(valor)
-});
+const valorFormatado = Number(valor).toFixed(2);
 
-return pix.payload();
+return `pix:${pixChave}?amount=${valorFormatado}`;
 
 }
 
@@ -150,7 +140,6 @@ return(
 </div>
 );
 }
-
 
 return(
 
@@ -202,9 +191,7 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
-
 💳 Gerar PIX
-
 </button>
 
 
@@ -218,9 +205,7 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
-
 🗑 Excluir
-
 </button>
 
 
@@ -278,9 +263,7 @@ padding:"10px 18px",
 borderRadius:8
 }}
 >
-
 📋 Copiar PIX
-
 </button>
 
 </div>
