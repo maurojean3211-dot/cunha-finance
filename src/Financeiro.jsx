@@ -61,7 +61,7 @@ setCarregando(false);
 }
 
 
-// ================= BUSCAR PIX DA EMPRESA
+// ================= BUSCAR PIX
 
 async function buscarPix(empId){
 
@@ -117,19 +117,31 @@ setPixAtual(l.id === pixAtual?.id ? null : l);
 // ================= FORMATAR DATA
 
 function formatarData(data){
-
 return new Date(data).toLocaleDateString("pt-BR");
-
 }
 
 
-// ================= GERAR TEXTO PIX PADRÃO
+// ================= GERAR PAYLOAD PIX REAL
 
 function gerarPayloadPix(valor){
 
-const valorFormatado = Number(valor).toFixed(2);
+const valorFormatado = Number(valor).toFixed(2).replace(".", "");
 
-return `00020126580014BR.GOV.BCB.PIX0136${pixChave}5204000053039865406${valorFormatado}5802BR5920CUNHA FINANCE6009SAO PAULO62070503***6304`;
+const payload =
+"000201" +
+"26330014BR.GOV.BCB.PIX01" +
+pixChave.length.toString().padStart(2,"0") +
+pixChave +
+"52040000" +
+"5303986" +
+"54" + valorFormatado.length.toString().padStart(2,"0") + valorFormatado +
+"5802BR" +
+"5913CUNHA FINANCE" +
+"6009SAO PAULO" +
+"62070503***" +
+"6304";
+
+return payload;
 
 }
 
@@ -227,18 +239,19 @@ borderRadius:6
 </button>
 
 
-
 {/* PIX ABAIXO DA VENDA */}
 
 {pixAtual?.id === l.id && (
 
 <div
 style={{
-marginTop:20,
-padding:20,
-background:"#000",
-borderRadius:10,
-textAlign:"center"
+marginTop:15,
+padding:15,
+background:"#0f172a",
+borderRadius:12,
+textAlign:"center",
+maxWidth:260,
+margin:"15px auto"
 }}
 >
 
@@ -246,13 +259,13 @@ textAlign:"center"
 
 <p><b>Valor:</b> R$ {Number(l.valor).toFixed(2)}</p>
 
-<p><b>Chave:</b> {pixChave}</p>
+<p style={{fontSize:12}}><b>Chave:</b> {pixChave}</p>
 
 <br/>
 
 <QRCodeCanvas
 value={payloadPix}
-size={220}
+size={180}
 />
 
 <br/><br/>
