@@ -99,18 +99,14 @@ carregarLancamentos(empresaId);
 // ================= GERAR PIX
 
 function gerarPix(l){
-
 setPixAtual(l.id === pixAtual?.id ? null : l);
-
 }
 
 
 // ================= FORMATAR DATA
 
 function formatarData(data){
-
 return new Date(data).toLocaleDateString("pt-BR");
-
 }
 
 
@@ -143,7 +139,7 @@ return crc.toString(16).toUpperCase().padStart(4,"0");
 }
 
 
-// ================= GERAR PAYLOAD PIX
+// ================= GERAR PAYLOAD PIX (PADRÃO BACEN)
 
 function gerarPayload(valor){
 
@@ -168,7 +164,7 @@ let payload =
 "5303986" +
 "54" + String(valorFormatado.length).padStart(2,"0") + valorFormatado +
 "5802BR" +
-"5910CUNHAFIN" +
+"5913CUNHAFINANCE" +
 "6009SAOPAULO" +
 "62070503***" +
 "6304";
@@ -249,9 +245,7 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
-
 💳 Gerar PIX
-
 </button>
 
 
@@ -265,9 +259,7 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
-
 🗑 Excluir
-
 </button>
 
 
@@ -298,6 +290,20 @@ size={180}
 
 <br/><br/>
 
+<textarea
+value={payloadPix}
+readOnly
+style={{
+width:"100%",
+height:60,
+borderRadius:6,
+padding:8,
+fontSize:12
+}}
+/>
+
+<br/><br/>
+
 <button
 onClick={()=>navigator.clipboard.writeText(payloadPix)}
 style={{
@@ -308,9 +314,7 @@ padding:"10px 18px",
 borderRadius:8
 }}
 >
-
 📋 Copiar PIX
-
 </button>
 
 </div>
