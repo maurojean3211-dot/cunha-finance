@@ -12,11 +12,12 @@ const [bloqueado,setBloqueado] = useState(false);
 const [pixAtual,setPixAtual] = useState(null);
 const [pixChave,setPixChave] = useState("");
 
-// ================= CARREGAR USUARIO
-
 useEffect(()=>{
 carregarUsuario();
 },[]);
+
+
+// ================= CARREGAR USUARIO
 
 async function carregarUsuario(){
 
@@ -29,28 +30,17 @@ setCarregando(false);
 return;
 }
 
-const { data:usuario, error } = await supabase
+const { data:usuario } = await supabase
 .from("usuarios")
 .select("empresa_id, role")
 .eq("id",userData.user.id)
 .single();
-
-if(error){
-console.log("Erro usuario:",error);
-setCarregando(false);
-return;
-}
 
 const empId = usuario?.empresa_id;
 const role = usuario?.role;
 
 if(role === "admin"){
 setBloqueado(true);
-setCarregando(false);
-return;
-}
-
-if(!empId){
 setCarregando(false);
 return;
 }
@@ -70,6 +60,7 @@ setCarregando(false);
 
 }
 
+
 // ================= BUSCAR PIX DA EMPRESA
 
 async function buscarPix(empId){
@@ -86,96 +77,81 @@ setPixChave(data.pix_chave);
 
 }
 
+
 // ================= CARREGAR LANCAMENTOS
 
 async function carregarLancamentos(empId){
 
-if(!empId) return;
-
-const { data, error } = await supabase
+const { data } = await supabase
 .from("lancamentos")
 .select("*")
 .eq("empresa_id",empId)
 .order("data_lancamento",{ascending:false});
 
-if(error){
-console.log(error);
-return;
-}
-
 setLancamentos(data || []);
 
 }
+
 
 // ================= EXCLUIR
 
 async function excluir(id){
 
-if(!empresaId) return;
-
-const { error } = await supabase
+await supabase
 .from("lancamentos")
 .delete()
-.eq("id",id)
-.eq("empresa_id",empresaId);
-
-if(error){
-console.log(error);
-alert("Erro ao excluir");
-return;
-}
+.eq("id",id);
 
 carregarLancamentos(empresaId);
 
 }
 
+
 // ================= GERAR PIX
 
 function gerarPix(l){
-
-setPixAtual(l);
-
+setPixAtual(l.id === pixAtual?.id ? null : l);
 }
+
 
 // ================= FORMATAR DATA
 
 function formatarData(data){
 
-if(!data) return "";
-
 return new Date(data).toLocaleDateString("pt-BR");
 
 }
 
-// ================= TEXTO PIX
 
-const textoPix = pixAtual
-? `PIX\nChave:${pixChave}\nValor:${Number(pixAtual.valor).toFixed(2)}`
-: "";
+// ================= GERAR TEXTO PIX PADRÃO
 
-// ================= TELA CARREGANDO
+function gerarPayloadPix(valor){
+
+const valorFormatado = Number(valor).toFixed(2);
+
+return `00020126580014BR.GOV.BCB.PIX0136${pixChave}5204000053039865406${valorFormatado}5802BR5920CUNHA FINANCE6009SAO PAULO62070503***6304`;
+
+}
+
+
+// ================= TELA
 
 if(carregando){
 return(
-
 <div style={{padding:20}}>
-<h2>Carregando dados da empresa...</h2>
+<h2>Carregando...</h2>
 </div>
 );
 }
-
-// ================= BLOQUEIO ADMIN
 
 if(bloqueado){
 return(
-
 <div style={{padding:20}}>
-<h2>Painel financeiro disponível apenas para empresas.</h2>
+<h2>Painel financeiro apenas para empresas.</h2>
 </div>
 );
 }
 
-// ================= TELA
 
 return(
 
@@ -183,24 +159,25 @@ return(
 
 <h1>💰 Financeiro</h1>
 
-{lancamentos.length === 0 && (
 
-<p>Nenhum lançamento encontrado.</p>
-)}
+{lancamentos.map(l=>{
 
-{lancamentos.map(l=>(
+const payloadPix = gerarPayloadPix(l.valor);
+
+return(
 
 <div
 key={l.id}
 style={{
-border:"1px solid #ccc",
-padding:10,
-marginBottom:10,
-borderRadius:6
+border:"1px solid #2c2c2c",
+background:"#111",
+padding:15,
+marginBottom:20,
+borderRadius:10
 }}
 >
 
-<strong>{l.tipo}</strong>
+<strong style={{fontSize:16}}>{l.tipo}</strong>
 
 <br/>
 
@@ -212,7 +189,7 @@ borderRadius:6
 
 <br/>
 
-💰 R$ {Number(l.valor || 0).toFixed(2)}
+💰 R$ {Number(l.valor).toFixed(2)}
 
 <br/><br/>
 
@@ -223,59 +200,88 @@ marginRight:10,
 background:"#16a34a",
 color:"#fff",
 border:"none",
-padding:"6px 10px",
-borderRadius:6
+padding:"8px 14px",
+borderRadius:6,
+cursor:"pointer"
 }}
-
 >
 
-💳 Gerar PIX </button>
+💳 Gerar PIX
 
-<button onClick={()=>excluir(l.id)}>
-🗑 Excluir </button>
+</button>
 
-</div>
 
-))}
+<button
+onClick={()=>excluir(l.id)}
+style={{
+background:"#2563eb",
+color:"#fff",
+border:"none",
+padding:"8px 14px",
+borderRadius:6
+}}
+>
 
-{/* PIX */}
+🗑 Excluir
 
-{pixAtual && (
+</button>
 
-<div style={{textAlign:"center",marginTop:30}}>
 
-<h2>Pagamento PIX</h2>
 
-<p><strong>Valor:</strong> R$ {Number(pixAtual.valor).toFixed(2)}</p>
+{/* PIX ABAIXO DA VENDA */}
 
-<p><strong>Chave PIX:</strong> {pixChave}</p>
+{pixAtual?.id === l.id && (
+
+<div
+style={{
+marginTop:20,
+padding:20,
+background:"#000",
+borderRadius:10,
+textAlign:"center"
+}}
+>
+
+<h3>Pagamento PIX</h3>
+
+<p><b>Valor:</b> R$ {Number(l.valor).toFixed(2)}</p>
+
+<p><b>Chave:</b> {pixChave}</p>
 
 <br/>
 
 <QRCodeCanvas
-value={textoPix}
-size={240}
+value={payloadPix}
+size={220}
 />
 
 <br/><br/>
 
 <button
-onClick={()=>navigator.clipboard.writeText(pixChave)}
+onClick={()=>navigator.clipboard.writeText(payloadPix)}
 style={{
-background:"#10b981",
+background:"#22c55e",
 color:"#fff",
 border:"none",
-padding:"8px 16px",
-borderRadius:6
+padding:"10px 18px",
+borderRadius:8,
+cursor:"pointer"
 }}
-
 >
 
-Copiar chave PIX </button>
+📋 Copiar PIX
+
+</button>
 
 </div>
 
 )}
+
+</div>
+
+);
+
+})}
 
 </div>
 
