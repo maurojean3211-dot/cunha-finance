@@ -1,4 +1,3 @@
-```javascript
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
@@ -20,14 +19,7 @@ carregarUsuario();
 
 async function carregarUsuario(){
 
-try{
-
 const { data:{ user } } = await supabase.auth.getUser();
-
-if(!user){
-setCarregando(false);
-return;
-}
 
 const { data:usuario } = await supabase
 .from("usuarios")
@@ -35,21 +27,10 @@ const { data:usuario } = await supabase
 .eq("id",user.id)
 .single();
 
-if(!usuario?.empresa_id){
-setCarregando(false);
-return;
-}
-
 setEmpresaId(usuario.empresa_id);
 
 await buscarPix(usuario.empresa_id);
 await carregarLancamentos(usuario.empresa_id);
-
-}catch(err){
-
-console.log("Erro usuario:",err);
-
-}
 
 setCarregando(false);
 
@@ -60,29 +41,13 @@ setCarregando(false);
 
 async function buscarPix(empId){
 
-try{
-
 const { data } = await supabase
 .from("empresas")
 .select("pix_chave")
 .eq("id",empId)
 .single();
 
-if(data?.pix_chave){
-
-setPixChave(data.pix_chave);
-
-}else{
-
-console.warn("Empresa sem chave PIX cadastrada");
-
-}
-
-}catch(err){
-
-console.log("Erro buscar pix:",err);
-
-}
+setPixChave(data?.pix_chave || "");
 
 }
 
@@ -120,14 +85,6 @@ carregarLancamentos(empresaId);
 
 function gerarPix(l){
 
-if(!pixChave){
-
-alert("⚠ Cadastre uma chave PIX na empresa primeiro.");
-
-return;
-
-}
-
 setPixAtual(l.id === pixAtual?.id ? null : l);
 
 }
@@ -142,20 +99,22 @@ return new Date(data).toLocaleDateString("pt-BR");
 }
 
 
+// ================= LINK PIX
+
+function gerarLinkPix(){
+
+if(!pixChave) return "";
+
+return `https://pix.bcb.gov.br/pix?q=${pixChave}`;
+
+}
+
+
 // ================= COPIAR PIX
 
 function copiarPix(){
 
-if(!pixChave){
-
-alert("Chave PIX não cadastrada");
-
-return;
-
-}
-
 navigator.clipboard.writeText(pixChave);
-
 alert("Chave PIX copiada!");
 
 }
@@ -176,6 +135,8 @@ return(
 <h1>💰 Financeiro</h1>
 
 {lancamentos.map(l=>{
+
+const linkPix = gerarLinkPix();
 
 return(
 
@@ -254,23 +215,12 @@ textAlign:"center"
 
 <p>Valor: R$ {Number(l.valor).toFixed(2)}</p>
 
-<p><b>Chave PIX:</b></p>
+<p><b>Chave PIX:</b> {pixChave}</p>
 
-<textarea
-value={pixChave}
-readOnly
-style={{
-width:"100%",
-height:50,
-borderRadius:6,
-padding:5
-}}
-/>
-
-<br/><br/>
+<br/>
 
 <QRCodeCanvas
-value={pixChave}
+value={linkPix}
 size={180}
 />
 
@@ -306,4 +256,3 @@ borderRadius:6
 )
 
 }
-```
