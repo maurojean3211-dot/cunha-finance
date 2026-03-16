@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
+import { Pix } from "pix-payload";
 
 export default function Financeiro(){
 
@@ -99,79 +100,35 @@ carregarLancamentos(empresaId);
 // ================= GERAR PIX
 
 function gerarPix(l){
+
 setPixAtual(l.id === pixAtual?.id ? null : l);
+
 }
 
 
 // ================= FORMATAR DATA
 
 function formatarData(data){
+
 return new Date(data).toLocaleDateString("pt-BR");
-}
-
-
-// ================= CRC16
-
-function crc16(str){
-
-let crc = 0xFFFF;
-
-for (let c = 0; c < str.length; c++){
-
-crc ^= str.charCodeAt(c) << 8;
-
-for (let i = 0; i < 8; i++){
-
-if ((crc & 0x8000) !== 0){
-crc = (crc << 1) ^ 0x1021;
-}else{
-crc <<= 1;
-}
-
-crc &= 0xFFFF;
-
-}
-
-}
-
-return crc.toString(16).toUpperCase().padStart(4,"0");
 
 }
 
 
-// ================= GERAR PAYLOAD PIX (PADRÃO BACEN)
+// ================= GERAR PAYLOAD PIX
 
 function gerarPayload(valor){
 
 if(!pixChave) return "";
 
-const chave = pixChave.trim();
-const valorFormatado = Number(valor).toFixed(2);
+const pix = Pix({
+key: pixChave,
+name: "CUNHA FINANCE",
+city: "SAO PAULO",
+value: Number(valor)
+});
 
-const merchantAccount =
-"0014BR.GOV.BCB.PIX" +
-"01" +
-String(chave.length).padStart(2,"0") +
-chave;
-
-const merchantAccountLength =
-String(merchantAccount.length).padStart(2,"0");
-
-let payload =
-"000201" +
-"26" + merchantAccountLength + merchantAccount +
-"52040000" +
-"5303986" +
-"54" + String(valorFormatado.length).padStart(2,"0") + valorFormatado +
-"5802BR" +
-"5913CUNHAFINANCE" +
-"6009SAOPAULO" +
-"62070503***" +
-"6304";
-
-payload += crc16(payload);
-
-return payload;
+return pix.payload();
 
 }
 
@@ -245,7 +202,9 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
+
 💳 Gerar PIX
+
 </button>
 
 
@@ -259,7 +218,9 @@ padding:"8px 14px",
 borderRadius:6
 }}
 >
+
 🗑 Excluir
+
 </button>
 
 
@@ -285,7 +246,7 @@ margin:"15px auto"
 
 <QRCodeCanvas
 value={payloadPix}
-size={180}
+size={170}
 />
 
 <br/><br/>
@@ -297,15 +258,18 @@ style={{
 width:"100%",
 height:60,
 borderRadius:6,
-padding:8,
-fontSize:12
+padding:6,
+fontSize:11
 }}
 />
 
 <br/><br/>
 
 <button
-onClick={()=>navigator.clipboard.writeText(payloadPix)}
+onClick={()=>{
+navigator.clipboard.writeText(payloadPix);
+alert("PIX copiado!");
+}}
 style={{
 background:"#22c55e",
 color:"#fff",
@@ -314,7 +278,9 @@ padding:"10px 18px",
 borderRadius:8
 }}
 >
+
 📋 Copiar PIX
+
 </button>
 
 </div>
