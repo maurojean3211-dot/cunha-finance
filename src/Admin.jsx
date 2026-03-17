@@ -6,6 +6,9 @@ export default function Admin(){
 const [usuario,setUsuario] = useState(null);
 const [empresaId,setEmpresaId] = useState(null);
 
+// PIX
+const [pixChave,setPixChave] = useState("");
+
 // VENDA
 const [cliente,setCliente] = useState("");
 const [whatsapp,setWhatsapp] = useState("");
@@ -46,11 +49,47 @@ return;
 
 setEmpresaId(usuarioDB?.empresa_id);
 
+// BUSCAR CHAVE PIX DA EMPRESA
+
+const { data:empresa } = await supabase
+.from("empresas")
+.select("pix_chave")
+.eq("id",usuarioDB?.empresa_id)
+.single();
+
+setPixChave(empresa?.pix_chave || "");
+
 }
 
 carregar();
 
 },[]);
+
+// ================= SALVAR PIX
+
+async function salvarPix(){
+
+if(!empresaId){
+alert("Empresa não carregada");
+return;
+}
+
+const { error } = await supabase
+.from("empresas")
+.update({
+pix_chave:pixChave
+})
+.eq("id",empresaId);
+
+if(error){
+console.log("Erro salvar pix:",error);
+alert("Erro ao salvar PIX");
+return;
+}
+
+alert("Chave PIX salva com sucesso");
+
+}
 
 // ================= CALCULOS
 
@@ -261,6 +300,21 @@ return(
 <div style={{padding:30,color:"#fff"}}>
 
 <h1>Cunha Finance</h1>
+
+<h2>⚙ Configuração da Empresa</h2>
+
+<input
+style={input}
+placeholder="Cadastrar chave PIX da empresa"
+value={pixChave}
+onChange={(e)=>setPixChave(e.target.value)}
+/>
+
+<button onClick={salvarPix}>
+Salvar chave PIX
+</button>
+
+<hr style={{margin:"40px 0"}}/>
 
 <h2>📦 Registrar Venda</h2>
 

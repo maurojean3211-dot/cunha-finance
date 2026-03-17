@@ -19,13 +19,23 @@ carregarUsuario();
 
 async function carregarUsuario(){
 
-const { data:{ user } } = await supabase.auth.getUser();
+const { data:{ user } = {} } = await supabase.auth.getUser();
+
+if(!user){
+setCarregando(false);
+return;
+}
 
 const { data:usuario } = await supabase
 .from("usuarios")
 .select("empresa_id")
 .eq("id",user.id)
 .single();
+
+if(!usuario){
+setCarregando(false);
+return;
+}
 
 setEmpresaId(usuario.empresa_id);
 
@@ -47,7 +57,7 @@ const { data } = await supabase
 .eq("id",empId)
 .single();
 
-setPixChave(data?.pix_chave || "");
+setPixChave(String(data?.pix_chave || ""));
 
 }
 

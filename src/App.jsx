@@ -8,7 +8,6 @@ import MasterAdmin from "./MasterAdmin";
 import Financeiro from "./Financeiro.jsx";
 import Lucro from "./Lucro.jsx";
 import DespesasPessoais from "./DespesasPessoais.jsx";
-import Pix from "./PixVenda.jsx"; // CORRIGIDO AQUI
 
 export default function App(){
 
@@ -172,13 +171,6 @@ style={pagina==="despesas" ? botaoAtivo : botaoMenu}
 </button>
 
 <button
-onClick={()=>setPagina("pix")}
-style={pagina==="pix" ? botaoAtivo : botaoMenu}
->
-📱 PIX
-</button>
-
-<button
 onClick={()=>setPagina("admin")}
 style={pagina==="admin" ? botaoAtivo : botaoMenu}
 >
@@ -223,8 +215,6 @@ background:"#ef4444"
 {pagina==="lucro" && <Lucro />}
 
 {pagina==="despesas" && <DespesasPessoais />}
-
-{pagina==="pix" && <Pix />}
 
 {pagina==="admin" && <Admin />}
 
