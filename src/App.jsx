@@ -156,12 +156,18 @@ style={pagina==="financeiro" ? botaoAtivo : botaoMenu}
 💰 Financeiro
 </button>
 
+{/* LUCRO SOMENTE PARA ADMIN */}
+
+{role === "admin" && (
+
 <button
 onClick={()=>setPagina("lucro")}
 style={pagina==="lucro" ? botaoAtivo : botaoMenu}
 >
 📈 Lucro
 </button>
+
+)}
 
 <button
 onClick={()=>setPagina("despesas")}
@@ -212,7 +218,9 @@ background:"#ef4444"
 
 {pagina==="financeiro" && <Financeiro />}
 
-{pagina==="lucro" && <Lucro />}
+{/* PROTEÇÃO EXTRA */}
+
+{pagina==="lucro" && role==="admin" && <Lucro />}
 
 {pagina==="despesas" && <DespesasPessoais />}
 
