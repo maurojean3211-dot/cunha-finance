@@ -99,23 +99,122 @@ return new Date(data).toLocaleDateString("pt-BR");
 }
 
 
-// ================= LINK PIX
+// ================= GERAR PIX OFICIAL
 
-function gerarLinkPix(){
+function gerarCodigoPix(valor){
 
 if(!pixChave) return "";
 
-return `https://pix.bcb.gov.br/pix?q=${pixChave}`;
+const nome = "CUNHA";
+const cidade = "ITATIBA";
+
+const valorFormatado = Number(valor).toFixed(2);
+
+function campo(id,valor){
+return id + valor.length.toString().padStart(2,"0") + valor;
+}
+
+let payload =
+"000201" +
+"010212" +
+campo("26",
+campo("00","BR.GOV.BCB.PIX") +
+campo("01",pixChave)
+) +
+campo("52","0000") +
+campo("53","986") +
+campo("54",valorFormatado) +
+campo("58","BR") +
+campo("59",nome) +
+campo("60",cidade) +
+campo("62",campo("05","***"));
+
+function crc16(str){
+
+let crc = 0xFFFF;
+
+for(let c=0;c<str.length;c++){
+
+crc ^= str.charCodeAt(c) << 8;
+
+for(let i=0;i<8;i++){
+
+crc = crc & 0x8000
+? (crc<<1)^0x1021
+: crc<<1;
+
+}
+
+}
+
+crc &= 0xFFFF;
+
+return crc.toString(16).toUpperCase().padStart(4,"0");
+
+}
+
+payload += "6304" + crc16(payload + "6304");
+
+return payload;
 
 }
 
 
 // ================= COPIAR PIX
 
-function copiarPix(){
+function copiarPix(valor){
 
-navigator.clipboard.writeText(pixChave);
-alert("Chave PIX copiada!");
+const codigo = gerarCodigoPix(valor);
+
+if(!codigo){
+alert("Erro ao gerar PIX");
+return;
+}
+
+if(navigator.clipboard && window.isSecureContext){
+
+navigator.clipboard.writeText(codigo)
+.then(()=>{
+
+alert("PIX copia e cola copiado!");
+
+})
+.catch(()=>{
+
+copiarFallback(codigo);
+
+});
+
+}else{
+
+copiarFallback(codigo);
+
+}
+
+}
+
+
+// ================= FALLBACK COPIAR
+
+function copiarFallback(texto){
+
+const area = document.createElement("textarea");
+
+area.value = texto;
+
+area.style.position = "fixed";
+area.style.left = "-999999px";
+
+document.body.appendChild(area);
+
+area.focus();
+area.select();
+
+document.execCommand("copy");
+
+document.body.removeChild(area);
+
+alert("PIX copia e cola copiado!");
 
 }
 
@@ -136,7 +235,7 @@ return(
 
 {lancamentos.map(l=>{
 
-const linkPix = gerarLinkPix();
+const codigoPix = gerarCodigoPix(Number(l.valor));
 
 return(
 
@@ -220,14 +319,30 @@ textAlign:"center"
 <br/>
 
 <QRCodeCanvas
-value={linkPix}
-size={180}
+value={codigoPix || "PIX"}
+size={220}
+bgColor="#ffffff"
+fgColor="#000000"
+level="H"
+includeMargin={true}
+/>
+
+<br/><br/>
+
+<textarea
+value={codigoPix}
+readOnly
+style={{
+width:"100%",
+maxWidth:400,
+height:80
+}}
 />
 
 <br/><br/>
 
 <button
-onClick={copiarPix}
+onClick={()=>copiarPix(Number(l.valor))}
 style={{
 background:"#22c55e",
 color:"#fff",
@@ -237,7 +352,7 @@ borderRadius:6
 }}
 >
 
-📋 Copiar chave PIX
+📋 Copiar PIX
 
 </button>
 

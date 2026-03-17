@@ -8,7 +8,7 @@ import MasterAdmin from "./MasterAdmin";
 import Financeiro from "./Financeiro.jsx";
 import Lucro from "./Lucro.jsx";
 import DespesasPessoais from "./DespesasPessoais.jsx";
-import Pix from "./Pix.jsx";
+import Pix from "./PixVenda.jsx"; // CORRIGIDO AQUI
 
 export default function App(){
 
