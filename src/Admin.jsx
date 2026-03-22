@@ -23,6 +23,32 @@ const [material,setMaterial] = useState("");
 const [kilosCompra,setKilosCompra] = useState("");
 const [valorCompra,setValorCompra] = useState("");
 
+// ================= FUNÇÃO GARANTIR USUARIO 🔥
+
+async function garantirUsuario(userId, empresaId){
+
+if(!userId) return;
+
+let { data } = await supabase
+.from("usuarios")
+.select("id")
+.eq("id",userId)
+.maybeSingle();
+
+if(!data){
+
+console.log("Criando usuário automaticamente...");
+
+await supabase.from("usuarios").insert([{
+id:userId,
+empresa_id:empresaId || "becf3dd8-33d2-4412-bab6-559b264bed07",
+role:"admin"
+}]);
+
+}
+
+}
+
 // ================= CARREGAR USUARIO
 
 useEffect(()=>{
@@ -36,28 +62,28 @@ setUsuario(data.user);
 
 const userId = data.user.id;
 
-const { data:usuarioDB, error } = await supabase
+// garante usuario
+await garantirUsuario(userId);
+
+// busca empresa
+const { data:usuarioDB } = await supabase
 .from("usuarios")
 .select("empresa_id")
 .eq("id",userId)
-.single();
+.maybeSingle();
 
-if(error){
-console.log("Erro ao buscar usuario:",error);
-return;
-}
+if(usuarioDB?.empresa_id){
+setEmpresaId(usuarioDB.empresa_id);
 
-setEmpresaId(usuarioDB?.empresa_id);
-
-// BUSCAR CHAVE PIX DA EMPRESA
-
+// 🔥 CORREÇÃO AQUI
 const { data:empresa } = await supabase
 .from("empresas")
 .select("pix_chave")
-.eq("id",usuarioDB?.empresa_id)
-.single();
+.eq("id",usuarioDB.empresa_id)
+.maybeSingle();
 
 setPixChave(empresa?.pix_chave || "");
+}
 
 }
 
@@ -74,18 +100,10 @@ alert("Empresa não carregada");
 return;
 }
 
-const { error } = await supabase
+await supabase
 .from("empresas")
-.update({
-pix_chave:pixChave
-})
+.update({ pix_chave:pixChave })
 .eq("id",empresaId);
-
-if(error){
-console.log("Erro salvar pix:",error);
-alert("Erro ao salvar PIX");
-return;
-}
 
 alert("Chave PIX salva com sucesso");
 
@@ -108,6 +126,11 @@ alert("Empresa não carregada");
 return;
 }
 
+const { data } = await supabase.auth.getUser();
+const userId = data?.user?.id;
+
+await garantirUsuario(userId, empresaId);
+
 if(!descricao || !quantidade || !valorUnitario){
 alert("Preencha produto, quantidade e valor");
 return;
@@ -118,8 +141,8 @@ const valorParcela = valorTotal / parcelas;
 
 for(let i=0;i<parcelas;i++){
 
-let data = new Date();
-data.setMonth(data.getMonth()+i);
+let dataAtual = new Date();
+dataAtual.setMonth(dataAtual.getMonth()+i);
 
 const { error } = await supabase
 .from("lancamentos")
@@ -139,17 +162,17 @@ status:"pendente",
 cliente:cliente,
 whatsapp:whatsapp,
 
-data_lancamento:data.toISOString().split("T")[0],
-ano:data.getFullYear(),
-mes:data.getMonth()+1,
+data_lancamento:dataAtual.toISOString().split("T")[0],
+ano:dataAtual.getFullYear(),
+mes:dataAtual.getMonth()+1,
 
-usuario_id:usuario?.id,
+usuario_id:userId,
 empresa_id:empresaId
 
 }]);
 
 if(error){
-console.log("Erro ao salvar venda:",error);
+console.log("Erro detalhado:", error);
 alert("Erro ao salvar venda");
 return;
 }
@@ -157,7 +180,6 @@ return;
 }
 
 alert("Venda registrada");
-window.location.reload();
 
 }
 
@@ -170,117 +192,58 @@ alert("Empresa não carregada");
 return;
 }
 
+const { data } = await supabase.auth.getUser();
+const userId = data?.user?.id;
+
+await garantirUsuario(userId, empresaId);
+
 if(!fornecedor || !kilosCompra || !valorCompra){
 alert("Preencha fornecedor, quantidade e valor");
 return;
 }
 
-const { error } = await supabase
+const { data:compra, error } = await supabase
 .from("compras")
 .insert([{
-
-fornecedor:fornecedor,
-material:material,
-
+fornecedor,
+material,
 kilos:Number(kilosCompra),
 preco_compra:Number(valorCompra),
-
 valor_total:Number(totalCompra),
-
 empresa_id:empresaId,
-user_id:usuario?.id
-
-}]);
+user_id:userId
+}])
+.select()
+.single();
 
 if(error){
-console.log("Erro compra:",error);
+console.log("Erro compra:", error);
 alert("Erro ao salvar compra");
 return;
 }
 
+await supabase
+.from("lancamentos")
+.insert([{
+descricao: material || "Compra",
+valor:Number(totalCompra),
+tipo:"despesa",
+categoria:"compra",
+status:"pendente",
+data_lancamento:new Date().toISOString().split("T")[0],
+ano:new Date().getFullYear(),
+mes:new Date().getMonth()+1,
+empresa_id:empresaId,
+usuario_id:userId,
+origem:"compra",
+referencia_id:compra.id
+}]);
+
 alert("Compra registrada");
-window.location.reload();
 
 }
 
-// ================= ENVIAR WHATSAPP
-
-function enviarWhatsapp(){
-
-if(!whatsapp){
-alert("Informe o WhatsApp");
-return;
-}
-
-const mensagem =
-`Olá ${cliente}
-Sua compra de ${descricao}
-Total: R$ ${totalVenda}
-Parcelas: ${parcelas}`;
-
-const url =
-`https://wa.me/55${whatsapp}?text=${encodeURIComponent(mensagem)}`;
-
-window.open(url);
-
-}
-
-// ================= GERAR PIX
-
-async function gerarPix(){
-
-if(!descricao || !valorUnitario){
-alert("Preencha produto e valor");
-return;
-}
-
-try{
-
-const response = await fetch("/api/pix",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-valor:Number(totalVenda),
-descricao:descricao
-})
-
-});
-
-const data = await response.json();
-
-console.log("PIX criado:",data);
-
-if(data.qrCode){
-
-const novaJanela = window.open("");
-novaJanela.document.write(`
-<h2>Pagamento PIX</h2>
-<img src="${data.qrCode}" width="250"/>
-<p>PIX Copia e Cola:</p>
-<textarea rows="5" cols="40">${data.pixCopiaECola}</textarea>
-`);
-
-}else{
-
-alert("PIX gerado mas QR Code não retornou");
-
-}
-
-}catch(error){
-
-console.log("Erro PIX:",error);
-alert("Erro ao gerar PIX");
-
-}
-
-}
-
-// ================= INPUT STYLE
+// ================= TELA
 
 const input={
 width:"100%",
@@ -292,8 +255,6 @@ border:"1px solid #475569",
 background:"#111827",
 color:"#fff"
 };
-
-// ================= TELA
 
 return(
 
@@ -350,14 +311,6 @@ onChange={(e)=>setParcelas(Number(e.target.value))}/>
 
 <button onClick={salvarVenda}>
 Salvar Venda
-</button>
-
-<button onClick={gerarPix} style={{marginLeft:10}}>
-Gerar PIX
-</button>
-
-<button onClick={enviarWhatsapp} style={{marginLeft:10}}>
-Enviar WhatsApp
 </button>
 
 <hr style={{margin:"40px 0"}}/>

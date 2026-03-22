@@ -15,7 +15,13 @@ export default function Clientes() {
   async function iniciar() {
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+
+    console.log("USER LOGADO:", user); // 🔥 LOG 1
+
+    if (!user) {
+      alert("Usuário não logado");
+      return;
+    }
 
     const { data, error } = await supabase
       .from("usuarios")
@@ -23,15 +29,21 @@ export default function Clientes() {
       .eq("id", user.id)
       .single();
 
-    if (error) {
-      console.log(error);
+    console.log("DADOS USUARIO:", data); // 🔥 LOG 2
+    console.log("ERRO:", error); // 🔥 LOG 3
+
+    if (error || !data) {
+      alert("Usuário não encontrado na tabela 'usuarios'");
       return;
     }
 
-    if (data?.empresa_id) {
-      setEmpresaId(data.empresa_id);
-      carregarClientes(data.empresa_id);
+    if (!data.empresa_id) {
+      alert("Usuário sem empresa vinculada");
+      return;
     }
+
+    setEmpresaId(data.empresa_id);
+    carregarClientes(data.empresa_id);
 
   }
 
@@ -51,6 +63,10 @@ export default function Clientes() {
     setClientes(data || []);
   }
 
+  function limparTelefone(tel) {
+    return tel.replace(/\D/g, "");
+  }
+
   async function salvarCliente(){
 
     if(!empresaId){
@@ -63,12 +79,19 @@ export default function Clientes() {
       return;
     }
 
+    if(!telefone){
+      alert("Digite o WhatsApp do cliente");
+      return;
+    }
+
+    const telefoneLimpo = limparTelefone(telefone);
+
     const { data, error } = await supabase
       .from("clientes")
       .insert([
         {
           nome: nome.trim(),
-          telefone: telefone,
+          telefone: telefoneLimpo,
           empresa_id: empresaId
         }
       ])
@@ -80,7 +103,6 @@ export default function Clientes() {
       return;
     }
 
-    // adiciona cliente na lista imediatamente
     setClientes(prev => [data[0], ...prev]);
 
     setNome("");
@@ -103,7 +125,6 @@ export default function Clientes() {
       return;
     }
 
-    // remove da lista sem precisar buscar novamente
     setClientes(prev => prev.filter(c => c.id !== id));
 
   }
@@ -113,6 +134,10 @@ export default function Clientes() {
 
       <h1>👥 Clientes</h1>
 
+      {!empresaId && (
+        <p>Carregando empresa... (aguarde)</p>
+      )}
+
       <input
         placeholder="Nome do cliente"
         value={nome}
@@ -121,7 +146,7 @@ export default function Clientes() {
       />
 
       <input
-        placeholder="Telefone"
+        placeholder="WhatsApp (ex: 31999993068)"
         value={telefone}
         onChange={(e)=>setTelefone(e.target.value)}
         style={inputStyle}
@@ -143,7 +168,7 @@ export default function Clientes() {
           <div>
             <strong>{c.nome}</strong>
             <br />
-            {c.telefone}
+            📱 {c.telefone}
           </div>
 
           <button

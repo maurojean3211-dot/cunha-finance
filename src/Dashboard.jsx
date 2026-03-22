@@ -10,7 +10,8 @@ LineChart,
 Line,
 XAxis,
 YAxis,
-CartesianGrid
+CartesianGrid,
+ResponsiveContainer
 } from "recharts";
 
 export default function Dashboard(){
@@ -39,53 +40,21 @@ setCarregando(false);
 return;
 }
 
-// buscar usuario
-const { data:usuario,error } = await supabase
+const { data:usuario } = await supabase
 .from("usuarios")
 .select("empresa_id, role")
 .eq("id",user.id)
 .single();
 
-if(error){
-console.log("Erro usuario:",error);
-setCarregando(false);
-return;
-}
-
-// ===== ADMIN NÃO VÊ FINANCEIRO
-
 if(usuario?.role === "admin"){
-
-setReceitas(0);
-setDespesas(0);
-setSaldo(0);
-
-setDadosGrafico([
-{ name:"Receitas", value:0 },
-{ name:"Despesas", value:0 }
-]);
-
-setDadosMes([]);
-
-setCarregando(false);
-return;
-
-}
-
-const empresaId = usuario?.empresa_id;
-
-if(!empresaId){
-console.log("Empresa não encontrada");
 setCarregando(false);
 return;
 }
 
-await carregarDados(empresaId);
+await carregarDados(usuario?.empresa_id);
 
 }catch(err){
-
-console.log("Erro iniciar dashboard:",err);
-
+console.log(err);
 }
 
 setCarregando(false);
@@ -94,25 +63,17 @@ setCarregando(false);
 
 async function carregarDados(empresa_id){
 
-try{
+const dataLimite = new Date();
+dataLimite.setMonth(dataLimite.getMonth()-3);
 
-const {data,error} = await supabase
+const {data} = await supabase
 .from("lancamentos")
-.select("*")
-.eq("empresa_id",empresa_id);
-
-if(error){
-console.log("Erro lancamentos:",error);
-return;
-}
+.select("valor, tipo, mes, data_lancamento")
+.eq("empresa_id",empresa_id)
+.gte("data_lancamento", dataLimite.toISOString())
+.limit(200);
 
 calcularDados(data || []);
-
-}catch(err){
-
-console.log("Erro carregar dados:",err);
-
-}
 
 }
 
@@ -122,18 +83,11 @@ let totalReceita=0;
 let totalDespesa=0;
 
 lista.forEach(l=>{
-
 const tipo = String(l.tipo || "").toLowerCase();
 const valor = Number(l.valor || 0);
 
-if(tipo==="receita"){
-totalReceita += valor;
-}
-
-if(tipo==="despesa"){
-totalDespesa += valor;
-}
-
+if(tipo==="receita") totalReceita+=valor;
+if(tipo==="despesa") totalDespesa+=valor;
 });
 
 setReceitas(totalReceita);
@@ -145,74 +99,57 @@ setDadosGrafico([
 { name:"Despesas", value:totalDespesa }
 ]);
 
-// ===== GRÁFICO MENSAL
-
 const meses={};
 
 lista.forEach(l=>{
 
 let mes = Number(l.mes);
-
 if(!mes && l.data_lancamento){
 mes = new Date(l.data_lancamento).getMonth()+1;
 }
 
 if(!mes) return;
 
-if(!meses[mes]){
-meses[mes]=0;
-}
+if(!meses[mes]) meses[mes]=0;
 
 const tipo = String(l.tipo || "").toLowerCase();
 const valor = Number(l.valor || 0);
 
-if(tipo==="receita"){
-meses[mes]+=valor;
-}
-
-if(tipo==="despesa"){
-meses[mes]-=valor;
-}
+if(tipo==="receita") meses[mes]+=valor;
+if(tipo==="despesa") meses[mes]-=valor;
 
 });
 
-const nomesMes=[
-"Jan","Fev","Mar","Abr","Mai","Jun",
-"Jul","Ago","Set","Out","Nov","Dez"
-];
+const nomesMes=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-const dadosLinha = Object.keys(meses)
+setDadosMes(
+Object.keys(meses)
 .sort((a,b)=>a-b)
 .map(m=>({
 mes: nomesMes[m-1],
 valor: meses[m]
-}));
-
-setDadosMes(dadosLinha);
+}))
+);
 
 }
 
 const cores=["#22c55e","#ef4444"];
 
 if(carregando){
-return(
-<div style={{padding:30,color:"#fff"}}>
-<h2>Carregando Dashboard...</h2>
-</div>
-);
+return <div style={{padding:20,color:"#fff"}}>Carregando dados...</div>;
 }
 
 return(
 
-<div style={{padding:30,color:"#fff"}}>
+<div style={{padding:15,color:"#fff"}}>
 
-<h1>📊 Dashboard Financeiro</h1>
+<h2 style={{marginBottom:15}}>📊 Dashboard</h2>
 
 <div style={{
 display:"grid",
-gridTemplateColumns:"repeat(3,1fr)",
-gap:20,
-marginBottom:40
+gridTemplateColumns:"1fr",
+gap:15,
+marginBottom:20
 }}>
 
 <Card titulo="💰 Receitas" valor={receitas}/>
@@ -222,59 +159,40 @@ marginBottom:40
 </div>
 
 <div style={{
-display:"grid",
-gridTemplateColumns:"1fr 1fr",
-gap:40
+display:"flex",
+flexDirection:"column",
+gap:20
 }}>
 
-<div style={{background:"#111827",padding:20,borderRadius:10}}>
+<div style={{background:"#111827",padding:15,borderRadius:10}}>
+<h3>Distribuição</h3>
 
-<h3>Distribuição Financeira</h3>
-
-<PieChart width={350} height={300}>
-
-<Pie
-data={dadosGrafico}
-dataKey="value"
-nameKey="name"
-cx="50%"
-cy="50%"
-outerRadius={100}
-label
->
-
-{dadosGrafico.map((entry,index)=>(
-<Cell key={index} fill={cores[index % cores.length]} />
+<ResponsiveContainer width="100%" height={200}>
+<PieChart>
+<Pie data={dadosGrafico} dataKey="value" outerRadius={70}>
+{dadosGrafico.map((e,i)=>(
+<Cell key={i} fill={cores[i]} />
 ))}
-
 </Pie>
-
 <Tooltip/>
 <Legend/>
-
 </PieChart>
+</ResponsiveContainer>
 
 </div>
 
-<div style={{background:"#111827",padding:20,borderRadius:10}}>
+<div style={{background:"#111827",padding:15,borderRadius:10}}>
+<h3>Mensal</h3>
 
-<h3>Movimentação Mensal</h3>
-
-<LineChart width={350} height={300} data={dadosMes}>
-
+<ResponsiveContainer width="100%" height={200}>
+<LineChart data={dadosMes}>
 <CartesianGrid strokeDasharray="3 3"/>
 <XAxis dataKey="mes"/>
 <YAxis/>
 <Tooltip/>
-
-<Line
-type="monotone"
-dataKey="valor"
-stroke="#22c55e"
-strokeWidth={3}
-/>
-
+<Line type="monotone" dataKey="valor" stroke="#22c55e"/>
 </LineChart>
+</ResponsiveContainer>
 
 </div>
 
@@ -287,27 +205,16 @@ strokeWidth={3}
 }
 
 function Card({titulo,valor}){
-
 return(
-
 <div style={{
 background:"#111827",
-padding:20,
+padding:15,
 borderRadius:10
 }}>
-
-<h3>{titulo}</h3>
-
-<p style={{
-fontSize:24,
-fontWeight:"bold",
-color:"#22c55e"
-}}>
+<h4>{titulo}</h4>
+<p style={{fontSize:20,fontWeight:"bold",color:"#22c55e"}}>
 R$ {Number(valor||0).toFixed(2)}
 </p>
-
 </div>
-
 );
-
 }

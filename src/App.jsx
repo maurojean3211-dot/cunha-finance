@@ -11,38 +11,54 @@ import DespesasPessoais from "./DespesasPessoais.jsx";
 
 export default function App(){
 
+// STATES
 const [session,setSession] = useState(null);
 const [loadingSession,setLoadingSession] = useState(true);
 const [pagina,setPagina] = useState("dashboard");
 const [role,setRole] = useState(null);
+const [empresaId,setEmpresaId] = useState(null);
+const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
 
-// ===============================
-// CARREGAR SESSÃO
-// ===============================
+// RESPONSIVO
+useEffect(()=>{
+  function handleResize(){
+    setIsMobile(window.innerWidth < 768);
+  }
+  window.addEventListener("resize",handleResize);
+  return ()=> window.removeEventListener("resize",handleResize);
+},[]);
+
+// ================= SESSÃO
 
 useEffect(()=>{
 
 async function carregarSessao(){
 
+try{
+
 const { data } = await supabase.auth.getSession();
+const user = data?.session?.user || null;
 
-const sess = data?.session || null;
+setSession(user ? { user } : null);
 
-setSession(sess);
+if(user){
 
-if(sess?.user){
-
-const { data:usuario } = await supabase
+let { data:usuario } = await supabase
 .from("usuarios")
-.select("role")
-.eq("id",sess.user.id)
-.single();
+.select("role,empresa_id")
+.eq("id",user.id)
+.maybeSingle();
 
+setEmpresaId(usuario?.empresa_id || null);
 setRole(usuario?.role || "cliente");
 
 }
 
+}catch(err){
+console.log("Erro sessão:",err);
+} finally {
 setLoadingSession(false);
+}
 
 }
 
@@ -51,16 +67,17 @@ carregarSessao();
 const { data:{ subscription } } =
 supabase.auth.onAuthStateChange(async (_event,newSession)=>{
 
-setSession(newSession);
+setSession(newSession ? { user: newSession.user } : null);
 
 if(newSession?.user){
 
-const { data:usuario } = await supabase
+let { data:usuario } = await supabase
 .from("usuarios")
-.select("role")
+.select("role,empresa_id")
 .eq("id",newSession.user.id)
-.single();
+.maybeSingle();
 
+setEmpresaId(usuario?.empresa_id || null);
 setRole(usuario?.role || "cliente");
 
 }
@@ -73,54 +90,43 @@ subscription?.unsubscribe();
 
 },[]);
 
-// ===============================
-// SAIR
-// ===============================
+// ================= LOGOUT (RÁPIDO)
 
 async function sair(){
+try{
+  // limpa tela na hora (sem travar)
+  setSession(null);
+  setEmpresaId(null);
+  setRole(null);
+  setPagina("dashboard");
 
-await supabase.auth.signOut();
-window.location.reload();
+  // logout em segundo plano
+  supabase.auth.signOut();
 
+}catch(err){
+  console.log("Erro ao sair:", err);
+}
 }
 
-// ===============================
-// LOADING
-// ===============================
+// ================= LOADING
 
 if(loadingSession){
-
-return(
-
-<div style={{
-padding:40,
-background:"#020617",
-color:"#fff",
-minHeight:"100vh"
-}}>
-Carregando sistema...
-</div>
-
-);
-
+return <div style={{color:"#fff",padding:20}}>Iniciando sistema...</div>;
 }
 
-// ===============================
-// LOGIN
-// ===============================
+// ================= LOGIN
 
-if(!session){
+if(!session?.user){
 return <Login />;
 }
 
-// ===============================
-// SISTEMA
-// ===============================
+// ================= APP
 
 return(
 
 <div style={{
 display:"flex",
+flexDirection: isMobile ? "column" : "row",
 width:"100%",
 minHeight:"100vh",
 background:"#020617",
@@ -128,105 +134,77 @@ color:"#fff"
 }}>
 
 {/* MENU */}
-
 <div style={{
-width:220,
+width: isMobile ? "100%" : 220,
 background:"#020617",
-borderRight:"1px solid #1e293b",
-padding:20,
+borderRight: isMobile ? "none" : "1px solid #1e293b",
+borderBottom: isMobile ? "1px solid #1e293b" : "none",
+padding:10,
 display:"flex",
-flexDirection:"column"
+flexDirection: isMobile ? "row" : "column",
+flexWrap: isMobile ? "wrap" : "nowrap",
+gap:10,
+overflowX: isMobile ? "auto" : "visible"
 }}>
 
-<div>
+<h2 style={{whiteSpace:"nowrap", width:"100%"}}>Cunha Finance</h2>
 
-<h2 style={{marginBottom:20}}>Cunha Finance</h2>
-
-<button
-onClick={()=>setPagina("dashboard")}
-style={pagina==="dashboard" ? botaoAtivo : botaoMenu}
->
+<button onClick={()=>setPagina("dashboard")} style={pagina==="dashboard" ? botaoAtivo : botaoMenu}>
 📊 Dashboard
 </button>
 
-<button
-onClick={()=>setPagina("financeiro")}
-style={pagina==="financeiro" ? botaoAtivo : botaoMenu}
->
+<button onClick={()=>setPagina("financeiro")} style={pagina==="financeiro" ? botaoAtivo : botaoMenu}>
 💰 Financeiro
 </button>
 
-{/* LUCRO SOMENTE PARA ADMIN */}
-
 {role === "admin" && (
-
-<button
-onClick={()=>setPagina("lucro")}
-style={pagina==="lucro" ? botaoAtivo : botaoMenu}
->
+<button onClick={()=>setPagina("lucro")} style={pagina==="lucro" ? botaoAtivo : botaoMenu}>
 📈 Lucro
 </button>
-
 )}
 
-<button
-onClick={()=>setPagina("despesas")}
-style={pagina==="despesas" ? botaoAtivo : botaoMenu}
->
+<button onClick={()=>setPagina("despesas")} style={pagina==="despesas" ? botaoAtivo : botaoMenu}>
 💳 Pessoal
 </button>
 
-<button
-onClick={()=>setPagina("admin")}
-style={pagina==="admin" ? botaoAtivo : botaoMenu}
->
+<button onClick={()=>setPagina("admin")} style={pagina==="admin" ? botaoAtivo : botaoMenu}>
 ⚙ Sistema
 </button>
 
 {role === "admin" && (
-
-<button
-onClick={()=>setPagina("master")}
-style={pagina==="master" ? botaoAtivo : botaoMenu}
->
+<button onClick={()=>setPagina("master")} style={pagina==="master" ? botaoAtivo : botaoMenu}>
 👑 Master Admin
 </button>
-
 )}
 
-<hr style={{border:"1px solid #334155",margin:"20px 0"}}/>
-
-<button
-onClick={sair}
-style={{
-...botaoMenu,
-background:"#ef4444"
-}}
->
+<button onClick={sair} style={{...botaoMenu, background:"#ef4444"}}>
 🚪 Sair
 </button>
 
 </div>
 
-</div>
-
 {/* CONTEÚDO */}
+<div style={{
+flex:1,
+display:"flex",
+justifyContent:"center",
+padding: isMobile ? 10 : 20
+}}>
 
-<div style={{flex:1,padding:30}}>
+<div style={{
+width:"100%",
+maxWidth: isMobile ? "100%" : 800,
+margin:"0 auto"
+}}>
 
 {pagina==="dashboard" && <Dashboard />}
-
-{pagina==="financeiro" && <Financeiro />}
-
-{/* PROTEÇÃO EXTRA */}
-
+{pagina==="financeiro" && <Financeiro empresaId={empresaId} />}
 {pagina==="lucro" && role==="admin" && <Lucro />}
-
 {pagina==="despesas" && <DespesasPessoais />}
-
 {pagina==="admin" && <Admin />}
-
 {pagina==="master" && role==="admin" && <MasterAdmin />}
+
+</div>
 
 </div>
 
@@ -236,11 +214,12 @@ background:"#ef4444"
 
 }
 
+// ================= ESTILOS
+
 const botaoMenu={
 display:"block",
 width:"100%",
 padding:10,
-marginBottom:10,
 background:"#111827",
 color:"#fff",
 border:"none",
@@ -252,7 +231,6 @@ const botaoAtivo={
 display:"block",
 width:"100%",
 padding:10,
-marginBottom:10,
 background:"#2563eb",
 color:"#fff",
 border:"none",

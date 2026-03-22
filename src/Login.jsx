@@ -38,7 +38,8 @@ export default function Login({ onLogin }) {
     if (typeof onLogin === "function") {
       onLogin(user);
     } else {
-      window.location.reload();
+      // 🔹 evitar reload completo que quebra no celular
+      window.location.href = "/";
     }
   }
 
@@ -69,21 +70,55 @@ export default function Login({ onLogin }) {
     // 🔹 CRIAR EMPRESA AUTOMATICAMENTE
     if (data?.user) {
 
-      await supabase
+      const userId = data.user.id;
+
+      const { data:empresaExistente } =
+        await supabase
         .from("empresas")
-        .insert([
-          {
-            user_id: data.user.id,
-            name: email,
-            email: email,
-            cpf: cpf,
-            whatsapp: whatsapp,
-            plano: "Básico",
-            status: "Ativo",
-            tipo: "Empresa",
-            tipo_sistema: "financeiro"
-          }
-        ]);
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      let empresaId = null;
+
+      if(!empresaExistente){
+
+        const { data:empresaCriada } =
+          await supabase
+          .from("empresas")
+          .insert([
+            {
+              user_id: userId,
+              name: email,
+              email: email,
+              cpf: cpf,
+              whatsapp: whatsapp,
+              plano: "Básico",
+              status: "Ativo",
+              tipo: "Empresa",
+              tipo_sistema: "financeiro"
+            }
+          ])
+          .select()
+          .single();
+
+        empresaId = empresaCriada?.id;
+
+      }else{
+        empresaId = empresaExistente.id;
+      }
+
+      await supabase
+      .from("usuarios")
+      .insert([
+        {
+          id: userId,
+          email: email,
+          nome: email,
+          role: "cliente",
+          empresa_id: empresaId
+        }
+      ]);
 
     }
 

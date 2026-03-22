@@ -38,11 +38,45 @@ const [faturamento,setFaturamento]=useState(0);
 const [dadosDiarios,setDadosDiarios]=useState([]);
 const [dadosMensais,setDadosMensais]=useState([]);
 
+const [pixQr,setPixQr]=useState("");
+const [pixCode,setPixCode]=useState("");
+
 useEffect(()=>{
 carregarClientes();
 },[]);
 
+// ================= GERAR PIX
 
+async function gerarPix(cliente){
+
+let valor=49;
+
+if(cliente.plano==="Premium") valor=99;
+if(cliente.plano==="Enterprise") valor=199;
+
+const response = await fetch("/api/pix",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+nome:cliente.name,
+email:cliente.email,
+valor:valor,
+descricao:"Mensalidade Cunha Finance"
+})
+});
+
+const data = await response.json();
+
+if(data){
+setPixQr(data.encodedImage || data.qrCode || "");
+setPixCode(data.payload || data.copyPaste || "");
+}else{
+alert("Erro ao gerar PIX");
+}
+
+}
 
 // ================= CARREGAR CLIENTES
 
@@ -59,7 +93,6 @@ return;
 }
 
 const lista = data || [];
-
 setClientes(lista);
 
 let ativosCount=0;
@@ -105,37 +138,28 @@ setAtivos(ativosCount);
 setBloqueados(bloqueadosCount);
 setFaturamento(faturamentoTotal);
 
-let graficoDia = Object.keys(dias).map(d=>({
-dia:d,
-clientes:dias[d]
-}));
-
-if(graficoDia.length===0){
-graficoDia=[{dia:"Sem dados",clientes:0}]
-}
-
 const nomesMes=[
 "Jan","Fev","Mar","Abr","Mai","Jun",
 "Jul","Ago","Set","Out","Nov","Dez"
 ];
 
-let graficoMes = Object.keys(meses).map(m=>({
+setDadosDiarios(
+Object.keys(dias).map(d=>({
+dia:d,
+clientes:dias[d]
+}))
+);
+
+setDadosMensais(
+Object.keys(meses).map(m=>({
 mes:nomesMes[m-1],
 clientes:meses[m]
-}));
-
-if(graficoMes.length===0){
-graficoMes=[{mes:"Sem dados",clientes:0}]
-}
-
-setDadosDiarios(graficoDia);
-setDadosMensais(graficoMes);
+}))
+);
 
 }
 
-
-
-// ================= CADASTRAR OU EDITAR CLIENTE
+// ================= CADASTRAR CLIENTE
 
 async function cadastrarCliente(){
 
@@ -146,7 +170,7 @@ return;
 
 if(editandoId){
 
-const { error } = await supabase
+await supabase
 .from("empresas")
 .update({
 name:nome,
@@ -156,16 +180,11 @@ whatsapp:whatsapp
 })
 .eq("id",editandoId);
 
-if(error){
-alert(error.message);
-return;
-}
-
 setEditandoId(null);
 
 }else{
 
-const { error } = await supabase
+await supabase
 .from("empresas")
 .insert([
 {
@@ -180,11 +199,6 @@ tipo_sistema:"financeiro"
 }
 ]);
 
-if(error){
-alert(error.message);
-return;
-}
-
 }
 
 setNome("");
@@ -196,9 +210,7 @@ carregarClientes();
 
 }
 
-
-
-// ================= EDITAR CLIENTE
+// ================= EDITAR
 
 function editarCliente(c){
 
@@ -209,13 +221,11 @@ setEmail(c.email || "");
 setCpf(c.cpf || "");
 setWhatsapp(c.whatsapp || "");
 
-window.scrollTo({ top: 0, behavior: "smooth" });
+window.scrollTo({ top:0, behavior:"smooth" });
 
 }
 
-
-
-// ================= EXCLUIR CLIENTE
+// ================= EXCLUIR
 
 async function excluirCliente(id){
 
@@ -228,13 +238,11 @@ carregarClientes();
 
 }
 
-
-
-// ================= ALTERAR STATUS
+// ================= STATUS
 
 async function alterarStatus(cliente){
 
-const novoStatus = cliente.status === "Ativo" ? "Bloqueado" : "Ativo";
+const novoStatus = cliente.status==="Ativo"?"Bloqueado":"Ativo";
 
 await supabase
 .from("empresas")
@@ -245,9 +253,7 @@ carregarClientes();
 
 }
 
-
-
-// ================= ISENTAR CLIENTE
+// ================= ISENÇÃO
 
 async function alternarIsencao(cliente){
 
@@ -260,166 +266,83 @@ carregarClientes();
 
 }
 
-
-
-const dadosPizza = [
-{ name:"Ativos", value: ativos },
-{ name:"Bloqueados", value: bloqueados }
-];
-
-const cores = ["#22c55e","#ef4444"];
-
-
-
 return(
 
 <div style={{padding:30,color:"#fff"}}>
 
 <h1>👑 Painel de Clientes do Sistema</h1>
 
-
-
-{/* FORMULÁRIO */}
+{pixCode && (
 
 <div style={{
 background:"#111827",
 padding:20,
 borderRadius:10,
-marginTop:20,
+marginBottom:30
+}}>
+
+<h3>💰 PIX Mensalidade</h3>
+
+{pixQr && <img src={pixQr} width={200}/>}
+
+<textarea
+value={pixCode}
+readOnly
+style={{width:"100%",height:80,marginTop:10}}
+/>
+
+<button
+onClick={()=>navigator.clipboard.writeText(pixCode)}
+style={{
+marginTop:10,
+padding:10,
+background:"#22c55e",
+border:"none",
+borderRadius:6,
+color:"#fff"
+}}
+>
+Copiar PIX
+</button>
+
+</div>
+
+)}
+
+<div style={{
+background:"#111827",
+padding:20,
+borderRadius:10,
 marginBottom:30,
 display:"flex",
 gap:10,
 flexWrap:"wrap"
 }}>
 
-<input
-placeholder="Nome"
-value={nome}
-onChange={e=>setNome(e.target.value)}
-style={{padding:8,borderRadius:6,border:"none"}}
-/>
+<input placeholder="Nome" value={nome} onChange={e=>setNome(e.target.value)} />
+<input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+<input placeholder="CPF" value={cpf} onChange={e=>setCpf(e.target.value)} />
+<input placeholder="WhatsApp" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} />
 
-<input
-placeholder="Email"
-value={email}
-onChange={e=>setEmail(e.target.value)}
-style={{padding:8,borderRadius:6,border:"none"}}
-/>
-
-<input
-placeholder="CPF"
-value={cpf}
-onChange={e=>setCpf(e.target.value)}
-style={{padding:8,borderRadius:6,border:"none"}}
-/>
-
-<input
-placeholder="WhatsApp"
-value={whatsapp}
-onChange={e=>setWhatsapp(e.target.value)}
-style={{padding:8,borderRadius:6,border:"none"}}
-/>
-
-<button
-onClick={cadastrarCliente}
-style={{
-padding:"8px 15px",
-background:"#22c55e",
-border:"none",
-borderRadius:6,
-color:"#fff",
-cursor:"pointer"
-}}
->
+<button onClick={cadastrarCliente}>
 {editandoId ? "Salvar Alteração" : "Cadastrar Cliente"}
 </button>
 
 </div>
 
-
-
-{/* CARDS */}
-
-<div style={{display:"flex",gap:20,marginTop:20,marginBottom:30}}>
-
-<Card titulo="Clientes Ativos" valor={ativos}/>
-<Card titulo="Clientes Bloqueados" valor={bloqueados}/>
-<Card titulo="Faturamento Mensal" valor={`R$ ${faturamento}`}/>
-
-</div>
-
-
-
-{/* GRÁFICOS */}
-
-<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,marginBottom:40}}>
-
-<div>
-
-<h3>📊 Clientes por dia</h3>
-
-<LineChart width={400} height={250} data={dadosDiarios}>
-<CartesianGrid strokeDasharray="3 3"/>
-<XAxis dataKey="dia"/>
-<YAxis/>
-<Tooltip/>
-<Line type="monotone" dataKey="clientes" stroke="#22c55e" strokeWidth={3}/>
-</LineChart>
-
-</div>
-
-<div>
-
-<h3>📈 Crescimento mensal</h3>
-
-<BarChart width={400} height={250} data={dadosMensais}>
-<CartesianGrid strokeDasharray="3 3"/>
-<XAxis dataKey="mes"/>
-<YAxis/>
-<Tooltip/>
-<Bar dataKey="clientes" fill="#3b82f6"/>
-</BarChart>
-
-</div>
-
-</div>
-
-
-
-{/* PIZZA */}
-
-<div style={{marginBottom:40}}>
-
-<h3>🍕 Distribuição de Clientes</h3>
-
-<PieChart width={400} height={300}>
-<Pie data={dadosPizza} dataKey="value" nameKey="name" outerRadius={100} label>
-{dadosPizza.map((entry,index)=>(
-<Cell key={index} fill={cores[index]} />
-))}
-</Pie>
-<Legend/>
-</PieChart>
-
-</div>
-
-
-
-{/* TABELA */}
-
-<table style={{width:"100%",background:"#111827",borderRadius:10}}>
+<table style={{width:"100%",background:"#111827"}}>
 
 <thead>
 <tr>
-<th style={th}>Tipo</th>
-<th style={th}>Nome</th>
-<th style={th}>Email</th>
-<th style={th}>CPF</th>
-<th style={th}>WhatsApp</th>
-<th style={th}>Plano</th>
-<th style={th}>Status</th>
-<th style={th}>Isento</th>
-<th style={th}>Ações</th>
+<th>Tipo</th>
+<th>Nome</th>
+<th>Email</th>
+<th>CPF</th>
+<th>WhatsApp</th>
+<th>Plano</th>
+<th>Status</th>
+<th>Isento</th>
+<th>Ações</th>
 </tr>
 </thead>
 
@@ -429,28 +352,29 @@ cursor:"pointer"
 
 <tr key={c.id}>
 
-<td style={td}>{c.tipo || "-"}</td>
-<td style={td}>{c.name || "-"}</td>
-<td style={td}>{c.email || "-"}</td>
-<td style={td}>{c.cpf || "-"}</td>
-<td style={td}>{c.whatsapp || "-"}</td>
-<td style={td}>{c.plano || "-"}</td>
-<td style={td}>{c.status || "Ativo"}</td>
-<td style={td}>{c.isento ? "Sim" : "Não"}</td>
+<td>{c.tipo}</td>
+<td>{c.name}</td>
+<td>{c.email}</td>
+<td>{c.cpf}</td>
+<td>{c.whatsapp}</td>
+<td>{c.plano}</td>
+<td>{c.status}</td>
+<td>{c.isento ? "Sim":"Não"}</td>
 
-<td style={td}>
+<td>
 
-<button onClick={()=>editarCliente(c)} style={botaoEditar}>Editar</button>
+<button onClick={()=>editarCliente(c)}>Editar</button>
+<button onClick={()=>gerarPix(c)}>PIX</button>
 
-<button onClick={()=>alterarStatus(c)} style={botaoStatus}>
-{c.status==="Ativo" ? "Bloquear" : "Ativar"}
+<button onClick={()=>alterarStatus(c)}>
+{c.status==="Ativo"?"Bloquear":"Ativar"}
 </button>
 
-<button onClick={()=>alternarIsencao(c)} style={botaoIsento}>
-{c.isento ? "Remover Isenção" : "Isentar"}
+<button onClick={()=>alternarIsencao(c)}>
+{c.isento?"Remover Isenção":"Isentar"}
 </button>
 
-<button onClick={()=>excluirCliente(c.id)} style={botaoExcluir}>
+<button onClick={()=>excluirCliente(c.id)}>
 Excluir
 </button>
 
@@ -469,69 +393,3 @@ Excluir
 );
 
 }
-
-
-
-// COMPONENTE CARD
-
-function Card({titulo,valor}){
-return(
-<div style={{background:"#111827",padding:20,borderRadius:10,minWidth:180}}>
-<h4>{titulo}</h4>
-<p style={{fontSize:22,fontWeight:"bold",color:"#22c55e"}}>
-{valor}
-</p>
-</div>
-);
-}
-
-
-
-const botaoEditar={
-marginRight:10,
-padding:8,
-background:"#6366f1",
-border:"none",
-borderRadius:6,
-color:"#fff",
-cursor:"pointer"
-};
-
-const botaoStatus={
-marginRight:10,
-padding:8,
-background:"#f59e0b",
-border:"none",
-borderRadius:6,
-color:"#fff",
-cursor:"pointer"
-};
-
-const botaoIsento={
-marginRight:10,
-padding:8,
-background:"#3b82f6",
-border:"none",
-borderRadius:6,
-color:"#fff",
-cursor:"pointer"
-};
-
-const botaoExcluir={
-padding:8,
-background:"#ef4444",
-border:"none",
-borderRadius:6,
-color:"#fff",
-cursor:"pointer"
-};
-
-const th={
-padding:10,
-borderBottom:"1px solid #333"
-};
-
-const td={
-padding:10,
-textAlign:"center"
-};
