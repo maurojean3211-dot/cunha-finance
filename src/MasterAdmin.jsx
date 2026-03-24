@@ -184,16 +184,14 @@ carregarClientes();
 
 }
 
-// ================= ESTILO TD (🔥 CORRIGIDO)
+// ================= ESTILO TD (CORRIGIDO DE VERDADE)
 
 const td = {
 padding:"10px",
 borderBottom:"1px solid #1f2937",
 textAlign:"left",
-whiteSpace:"nowrap",
-overflow:"hidden",
-textOverflow:"ellipsis",
-maxWidth:"180px"
+whiteSpace:"normal",
+wordBreak:"break-word"
 };
 
 return(
@@ -260,25 +258,23 @@ flexWrap:"wrap"
 
 </div>
 
-{/* 🔥 TABELA CORRIGIDA */}
 <table style={{
 width:"100%",
 background:"#111827",
-borderCollapse:"collapse",
-tableLayout:"fixed"
+borderCollapse:"collapse"
 }}>
 
 <thead>
 <tr style={{borderBottom:"2px solid #374151"}}>
-<th style={td}>Tipo</th>
-<th style={td}>Nome</th>
-<th style={td}>Email</th>
-<th style={td}>CPF</th>
-<th style={td}>WhatsApp</th>
-<th style={td}>Plano</th>
-<th style={td}>Status</th>
-<th style={td}>Isento</th>
-<th style={td}>Ações</th>
+<th style={{...td,width:"8%"}}>Tipo</th>
+<th style={{...td,width:"15%"}}>Nome</th>
+<th style={{...td,width:"18%"}}>Email</th>
+<th style={{...td,width:"10%"}}>CPF</th>
+<th style={{...td,width:"12%"}}>WhatsApp</th>
+<th style={{...td,width:"10%"}}>Plano</th>
+<th style={{...td,width:"10%"}}>Status</th>
+<th style={{...td,width:"7%"}}>Isento</th>
+<th style={{...td,width:"10%"}}>Ações</th>
 </tr>
 </thead>
 
