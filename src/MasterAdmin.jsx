@@ -1,21 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
-import {
-LineChart,
-Line,
-XAxis,
-YAxis,
-CartesianGrid,
-Tooltip,
-BarChart,
-Bar,
-PieChart,
-Pie,
-Cell,
-Legend
-} from "recharts";
-
 export default function MasterAdmin(){
 
 const [clientes,setClientes]=useState([]);
@@ -30,13 +15,6 @@ const [plano,setPlano]=useState("Básico");
 const [status,setStatus]=useState("Ativo");
 
 const [editandoId,setEditandoId]=useState(null);
-
-const [ativos,setAtivos]=useState(0);
-const [bloqueados,setBloqueados]=useState(0);
-const [faturamento,setFaturamento]=useState(0);
-
-const [dadosDiarios,setDadosDiarios]=useState([]);
-const [dadosMensais,setDadosMensais]=useState([]);
 
 const [pixQr,setPixQr]=useState("");
 const [pixCode,setPixCode]=useState("");
@@ -92,8 +70,7 @@ console.log(error);
 return;
 }
 
-const lista = data || [];
-setClientes(lista);
+setClientes(data || []);
 
 }
 
@@ -167,6 +144,9 @@ window.scrollTo({ top:0, behavior:"smooth" });
 
 async function excluirCliente(id){
 
+const confirmar = confirm("Deseja excluir esse cliente?");
+if(!confirmar) return;
+
 await supabase
 .from("empresas")
 .delete()
@@ -204,14 +184,16 @@ carregarClientes();
 
 }
 
-// ================= ESTILO TD
+// ================= ESTILO TD (🔥 CORRIGIDO)
 
 const td = {
 padding:"10px",
 borderBottom:"1px solid #1f2937",
 textAlign:"left",
-wordBreak:"break-word",
-maxWidth:"150px"
+whiteSpace:"nowrap",
+overflow:"hidden",
+textOverflow:"ellipsis",
+maxWidth:"180px"
 };
 
 return(
@@ -278,10 +260,12 @@ flexWrap:"wrap"
 
 </div>
 
+{/* 🔥 TABELA CORRIGIDA */}
 <table style={{
 width:"100%",
 background:"#111827",
-borderCollapse:"collapse"
+borderCollapse:"collapse",
+tableLayout:"fixed"
 }}>
 
 <thead>
