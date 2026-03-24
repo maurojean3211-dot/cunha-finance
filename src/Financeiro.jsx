@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
 
-// 🔥 PIX CORRIGIDO
+// 🔥 PIX
 function gerarPixBR(chave, nome, cidade, valor) {
 
   function format(id, value) {
@@ -50,6 +50,31 @@ function gerarPixBR(chave, nome, cidade, valor) {
   pix += crc16(pix);
 
   return pix;
+}
+
+// 🔥 NOVO: GERAR PARCELAS POR DIAS
+function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
+
+  const parcelas = [];
+  const valorParcela = (valorTotal / quantidade).toFixed(2);
+
+  let data = new Date(dataInicial);
+
+  for(let i = 1; i <= quantidade; i++){
+
+    let novaData = new Date(data);
+    novaData.setDate(data.getDate() + (intervaloDias * (i - 1)));
+
+    parcelas.push({
+      parcela: i,
+      total_parcelas: quantidade,
+      valor: valorParcela,
+      vencimento: novaData.toISOString().split("T")[0]
+    });
+
+  }
+
+  return parcelas;
 }
 
 export default function Financeiro(){
@@ -122,6 +147,32 @@ const { data } = await supabase
 setLancamentos(data || []);
 }
 
+// ================= GERAR PARCELAS
+
+async function criarParcelasTeste(){
+
+// 🔥 AQUI VOCÊ MUDA COMO QUISER
+const parcelas = gerarParcelas(300, 3, "2026-03-30", 15);
+
+for(const p of parcelas){
+
+await supabase.from("lancamentos").insert({
+empresa_id: empresaId,
+tipo: "RECEBER",
+descricao: "Venda parcelada automática",
+valor: p.valor,
+parcela: p.parcela,
+total_parcelas: p.total_parcelas,
+vencimento: p.vencimento
+});
+
+}
+
+alert("Parcelas criadas com sucesso!");
+carregarLancamentos(empresaId);
+
+}
+
 // ================= PIX
 
 function gerarPix(l){
@@ -156,7 +207,7 @@ const mensagem = `Olá ${l.cliente || ""} 👋
 📦 Parcela ${l.parcela || 1}/${l.total_parcelas || 1}
 📅 Vencimento: ${l.vencimento || "-"}
 
-💳 Pague via PIX abaixo:
+💳 Pague via PIX:
 ${codigoPix}`;
 
 window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
@@ -173,6 +224,10 @@ return(
 <div style={{padding:20}}>
 
 <h1>💰 CUNHA FINANCE</h1>
+
+<button onClick={criarParcelasTeste} style={{marginBottom:20}}>
+🔥 Gerar Parcelas Teste
+</button>
 
 {lancamentos.map(l=>{
 
@@ -201,7 +256,6 @@ borderRadius:8
 <div style={{display:"flex",gap:10}}>
 
 <button onClick={()=>gerarPix(l)}>PIX</button>
-
 <button onClick={()=>cobrarWhatsApp(l)}>📲 WhatsApp</button>
 
 </div>
