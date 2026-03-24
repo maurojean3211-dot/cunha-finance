@@ -85,12 +85,18 @@ const { data } = await supabase
 .eq("id", user.id)
 .maybeSingle();
 
+if(!data?.empresa_id){
+alert("Empresa não encontrada");
+return;
+}
+
 setEmpresaId(data.empresa_id);
 
 await buscarPix(data.empresa_id);
 await carregarLancamentos(data.empresa_id);
 
-}catch{
+}catch(e){
+console.log(e);
 alert("Erro ao iniciar sistema");
 }finally{
 setCarregando(false);
@@ -122,22 +128,40 @@ const { data } = await supabase
 setLancamentos(data || []);
 }
 
-// ================= EXCLUIR 🔥
+// ================= EXCLUIR 🔥 (CORRIGIDO)
 
 async function excluirLancamento(id){
 
-const confirmar = confirm("Deseja excluir esse lançamento?");
+try{
 
+if(!id){
+alert("Erro: ID não encontrado");
+return;
+}
+
+const confirmar = confirm("Deseja excluir esse lançamento?");
 if(!confirmar) return;
 
-await supabase
+const { error } = await supabase
 .from("lancamentos")
 .delete()
 .eq("id", id);
 
-alert("Excluído!");
+if(error){
+console.log(error);
+alert("Erro ao excluir");
+return;
+}
 
-carregarLancamentos(empresaId);
+alert("Excluído com sucesso!");
+
+// 🔥 ATUALIZA CERTO
+await carregarLancamentos(empresaId);
+
+}catch(e){
+console.log(e);
+alert("Erro inesperado ao excluir");
+}
 
 }
 
@@ -168,7 +192,6 @@ if(numero.length === 11) numero = "55" + numero;
 
 const codigoPix = gerarCodigoPix(l.valor);
 
-// 🔥 DATA FORMATADA
 const dataFormatada = l.vencimento
 ? new Date(l.vencimento).toLocaleDateString("pt-BR")
 : "-";
