@@ -4,13 +4,8 @@ import { supabase } from "./supabase";
 export default function Vendas(){
 
 const [clientes,setClientes] = useState([]);
-const [produtos,setProdutos] = useState([]);
-const [vendas,setVendas] = useState([]);
-
 const [clienteId,setClienteId] = useState("");
 const [clienteWhatsapp,setClienteWhatsapp] = useState("");
-
-const [produtoId,setProdutoId] = useState("");
 
 const [quantidade,setQuantidade] = useState("");
 const [precoUnitario,setPrecoUnitario] = useState("");
@@ -19,13 +14,14 @@ const [parcelas,setParcelas] = useState(1);
 const [intervalo,setIntervalo] = useState(30);
 const [dataInicial,setDataInicial] = useState("");
 
-const [pixEmpresa,setPixEmpresa] = useState("");
-
 const [dataVenda,setDataVenda] = useState(
 new Date().toISOString().split("T")[0]
 );
 
 const [empresaId,setEmpresaId] = useState(null);
+const [carregando,setCarregando] = useState(false);
+
+// ================= INIT
 
 useEffect(()=>{
 buscarEmpresa();
@@ -34,6 +30,8 @@ buscarEmpresa();
 // ================= GERAR PARCELAS
 
 function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
+
+  if(!dataInicial) return [];
 
   const lista = [];
   const valorParcela = (valorTotal / quantidade).toFixed(2);
@@ -57,7 +55,7 @@ function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
   return lista;
 }
 
-// ================= SELECIONAR CLIENTE 🔥
+// ================= SELECIONAR CLIENTE
 
 function selecionarCliente(id){
 
@@ -84,24 +82,9 @@ const { data } = await supabase
 .eq("id",user.id)
 .single();
 
-setEmpresaId(data.empresa_id);
+setEmpresaId(data?.empresa_id || null);
 
-buscarPix(data.empresa_id);
-buscarDados(data.empresa_id);
-
-}
-
-// ================= BUSCAR PIX
-
-async function buscarPix(empresa_id){
-
-const { data } = await supabase
-.from("empresas")
-.select("pix_chave")
-.eq("id",empresa_id)
-.single();
-
-setPixEmpresa(data?.pix_chave || "");
+buscarDados(data?.empresa_id);
 
 }
 
@@ -109,24 +92,14 @@ setPixEmpresa(data?.pix_chave || "");
 
 async function buscarDados(empresa_id){
 
+if(!empresa_id) return;
+
 const { data:clientesData } = await supabase
 .from("clientes")
 .select("*")
 .eq("empresa_id",empresa_id);
 
-const { data:produtosData } = await supabase
-.from("produtos")
-.select("*")
-.eq("empresa_id",empresa_id);
-
-const { data:vendasData } = await supabase
-.from("vendas")
-.select("*")
-.eq("empresa_id",empresa_id);
-
 setClientes(clientesData || []);
-setProdutos(produtosData || []);
-setVendas(vendasData || []);
 
 }
 
@@ -142,10 +115,20 @@ const valorParcela = parcelas > 0 ? valorTotal / parcelas : valorTotal;
 
 async function salvarVenda(){
 
-if(!empresaId) return alert("Empresa não carregada");
+if(carregando) return;
+
+if(!empresaId){
+alert("Sistema ainda carregando... tente novamente");
+return;
+}
+
 if(!clienteId) return alert("Selecione o cliente");
 if(!dataInicial) return alert("Informe a data inicial");
 if(valorTotal <= 0) return alert("Valor inválido");
+
+setCarregando(true);
+
+try{
 
 const { data:{ user } } = await supabase.auth.getUser();
 
@@ -153,7 +136,6 @@ const { data:{ user } } = await supabase.auth.getUser();
 await supabase.from("vendas").insert([{
 empresa_id:empresaId,
 cliente_id:clienteId,
-produto_id:produtoId || null,
 kilos:qtd,
 preco_unitario:preco,
 valor_total:valorTotal,
@@ -191,6 +173,12 @@ alert("Venda registrada com parcelas!");
 setQuantidade("");
 setPrecoUnitario("");
 setParcelas(1);
+
+}catch(e){
+alert("Erro ao salvar venda");
+}
+
+setCarregando(false);
 
 }
 
@@ -244,16 +232,18 @@ return(
 
 <button
 onClick={salvarVenda}
+disabled={carregando}
 style={{
 background:"#16a34a",
 color:"#fff",
 padding:10,
 border:"none",
-borderRadius:6
+borderRadius:6,
+opacity: carregando ? 0.6 : 1
 }}
 >
 
-💾 Salvar Venda
+{carregando ? "Salvando..." : "💾 Salvar Venda"}
 
 </button>
 
