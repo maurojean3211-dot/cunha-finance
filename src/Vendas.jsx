@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
-import { QRCodeCanvas } from "qrcode.react";
 
 export default function Vendas(){
 
@@ -17,8 +16,8 @@ const [quantidade,setQuantidade] = useState("");
 const [precoUnitario,setPrecoUnitario] = useState("");
 
 const [parcelas,setParcelas] = useState(1);
-const [intervalo,setIntervalo] = useState(30); // 🔥 NOVO
-const [dataInicial,setDataInicial] = useState(""); // 🔥 NOVO
+const [intervalo,setIntervalo] = useState(30);
+const [dataInicial,setDataInicial] = useState("");
 
 const [pixEmpresa,setPixEmpresa] = useState("");
 
@@ -32,30 +31,44 @@ useEffect(()=>{
 buscarEmpresa();
 },[]);
 
-// ================= GERAR PARCELAS 🔥
+// ================= GERAR PARCELAS
 
 function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
 
-  const parcelas = [];
+  const lista = [];
   const valorParcela = (valorTotal / quantidade).toFixed(2);
 
-  let data = new Date(dataInicial);
+  let base = new Date(dataInicial);
 
   for(let i = 1; i <= quantidade; i++){
 
-    let novaData = new Date(data);
-    novaData.setDate(data.getDate() + (intervaloDias * (i - 1)));
+    let nova = new Date(base);
+    nova.setDate(base.getDate() + (intervaloDias * (i - 1)));
 
-    parcelas.push({
+    lista.push({
       parcela: i,
       total_parcelas: quantidade,
       valor: valorParcela,
-      vencimento: novaData.toISOString().split("T")[0]
+      vencimento: nova.toISOString().split("T")[0]
     });
 
   }
 
-  return parcelas;
+  return lista;
+}
+
+// ================= SELECIONAR CLIENTE 🔥
+
+function selecionarCliente(id){
+
+  setClienteId(id);
+
+  const cliente = clientes.find(c => c.id == id);
+
+  if(cliente){
+    setClienteWhatsapp(cliente.whatsapp || "");
+  }
+
 }
 
 // ================= BUSCAR EMPRESA
@@ -63,7 +76,6 @@ function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
 async function buscarEmpresa(){
 
 const { data:{ user } } = await supabase.auth.getUser();
-
 if(!user) return;
 
 const { data } = await supabase
@@ -120,24 +132,24 @@ setVendas(vendasData || []);
 
 // ================= CALCULOS
 
-const qtd = parseFloat(quantidade) || 0;
-const preco = parseFloat(precoUnitario) || 0;
+const qtd = Number(quantidade) || 0;
+const preco = Number(precoUnitario) || 0;
 
 const valorTotal = preco * qtd;
 const valorParcela = parcelas > 0 ? valorTotal / parcelas : valorTotal;
 
-// ================= SALVAR VENDA 🔥🔥🔥
+// ================= SALVAR VENDA
 
 async function salvarVenda(){
 
-if(!dataInicial){
-alert("Informe a data inicial das parcelas");
-return;
-}
+if(!empresaId) return alert("Empresa não carregada");
+if(!clienteId) return alert("Selecione o cliente");
+if(!dataInicial) return alert("Informe a data inicial");
+if(valorTotal <= 0) return alert("Valor inválido");
 
 const { data:{ user } } = await supabase.auth.getUser();
 
-// salva venda normal
+// salva venda
 await supabase.from("vendas").insert([{
 empresa_id:empresaId,
 cliente_id:clienteId,
@@ -149,16 +161,16 @@ data_venda:dataVenda,
 user_id:user.id
 }]);
 
-// 🔥 gera parcelas
-const parcelasGeradas = gerarParcelas(
-  valorTotal,
-  Number(parcelas),
-  dataInicial,
-  Number(intervalo)
+// gera parcelas
+const lista = gerarParcelas(
+valorTotal,
+Number(parcelas),
+dataInicial,
+Number(intervalo)
 );
 
-// 🔥 salva no financeiro
-for(const p of parcelasGeradas){
+// salva financeiro
+for(const p of lista){
 
 await supabase.from("lancamentos").insert({
 empresa_id: empresaId,
@@ -174,7 +186,7 @@ vencimento: p.vencimento
 
 }
 
-alert("Venda e parcelas criadas!");
+alert("Venda registrada com parcelas!");
 
 setQuantidade("");
 setPrecoUnitario("");
@@ -182,11 +194,11 @@ setParcelas(1);
 
 }
 
-// ================= TELA
+// ================= UI
 
 return(
 
-<div style={{padding:20}}>
+<div style={{padding:20,maxWidth:500}}>
 
 <h1>🛒 Registrar Venda</h1>
 
@@ -194,14 +206,17 @@ return(
 
 <br/><br/>
 
-<select value={clienteId} onChange={e=>setClienteId(e.target.value)}>
-<option value="">Cliente</option>
-{clientes.map(c=>(<option key={c.id} value={c.id}>{c.nome}</option>))}
+<select value={clienteId} onChange={e=>selecionarCliente(e.target.value)}>
+<option value="">Selecione o cliente</option>
+{clientes.map(c=>(
+<option key={c.id} value={c.id}>{c.nome}</option>
+))}
 </select>
 
 <br/><br/>
 
 <input placeholder="Quantidade" value={quantidade} onChange={e=>setQuantidade(e.target.value)} />
+
 <br/><br/>
 
 <input placeholder="Valor unitário" value={precoUnitario} onChange={e=>setPrecoUnitario(e.target.value)} />
@@ -220,14 +235,26 @@ return(
 
 <br/><br/>
 
-<strong>Total: R$ {valorTotal.toFixed(2)}</strong>
+<div>
+<strong>Total:</strong> R$ {valorTotal.toFixed(2)}<br/>
+<strong>Parcela:</strong> R$ {valorParcela.toFixed(2)}
+</div>
+
 <br/>
-<strong>Parcela: R$ {valorParcela.toFixed(2)}</strong>
 
-<br/><br/>
+<button
+onClick={salvarVenda}
+style={{
+background:"#16a34a",
+color:"#fff",
+padding:10,
+border:"none",
+borderRadius:6
+}}
+>
 
-<button onClick={salvarVenda}>
-Salvar Venda
+💾 Salvar Venda
+
 </button>
 
 </div>
