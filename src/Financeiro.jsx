@@ -52,31 +52,6 @@ function gerarPixBR(chave, nome, cidade, valor) {
   return pix;
 }
 
-// 🔥 NOVO: GERAR PARCELAS POR DIAS
-function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
-
-  const parcelas = [];
-  const valorParcela = (valorTotal / quantidade).toFixed(2);
-
-  let data = new Date(dataInicial);
-
-  for(let i = 1; i <= quantidade; i++){
-
-    let novaData = new Date(data);
-    novaData.setDate(data.getDate() + (intervaloDias * (i - 1)));
-
-    parcelas.push({
-      parcela: i,
-      total_parcelas: quantidade,
-      valor: valorParcela,
-      vencimento: novaData.toISOString().split("T")[0]
-    });
-
-  }
-
-  return parcelas;
-}
-
 export default function Financeiro(){
 
 const [lancamentos,setLancamentos] = useState([]);
@@ -147,28 +122,21 @@ const { data } = await supabase
 setLancamentos(data || []);
 }
 
-// ================= GERAR PARCELAS
+// ================= EXCLUIR 🔥
 
-async function criarParcelasTeste(){
+async function excluirLancamento(id){
 
-// 🔥 AQUI VOCÊ MUDA COMO QUISER
-const parcelas = gerarParcelas(300, 3, "2026-03-30", 15);
+const confirmar = confirm("Deseja excluir esse lançamento?");
 
-for(const p of parcelas){
+if(!confirmar) return;
 
-await supabase.from("lancamentos").insert({
-empresa_id: empresaId,
-tipo: "RECEBER",
-descricao: "Venda parcelada automática",
-valor: p.valor,
-parcela: p.parcela,
-total_parcelas: p.total_parcelas,
-vencimento: p.vencimento
-});
+await supabase
+.from("lancamentos")
+.delete()
+.eq("id", id);
 
-}
+alert("Excluído!");
 
-alert("Parcelas criadas com sucesso!");
 carregarLancamentos(empresaId);
 
 }
@@ -200,12 +168,17 @@ if(numero.length === 11) numero = "55" + numero;
 
 const codigoPix = gerarCodigoPix(l.valor);
 
+// 🔥 DATA FORMATADA
+const dataFormatada = l.vencimento
+? new Date(l.vencimento).toLocaleDateString("pt-BR")
+: "-";
+
 const mensagem = `Olá ${l.cliente || ""} 👋
 
 🧾 ${l.descricao}
 💰 R$ ${Number(l.valor).toFixed(2)}
 📦 Parcela ${l.parcela || 1}/${l.total_parcelas || 1}
-📅 Vencimento: ${l.vencimento || "-"}
+📅 Vencimento: ${dataFormatada}
 
 💳 Pague via PIX:
 ${codigoPix}`;
@@ -224,10 +197,6 @@ return(
 <div style={{padding:20}}>
 
 <h1>💰 CUNHA FINANCE</h1>
-
-<button onClick={criarParcelasTeste} style={{marginBottom:20}}>
-🔥 Gerar Parcelas Teste
-</button>
 
 {lancamentos.map(l=>{
 
@@ -249,7 +218,7 @@ borderRadius:8
 <br/>
 
 📦 Parcela {l.parcela || 1}/{l.total_parcelas || 1}<br/>
-📅 {l.vencimento || "-"}
+📅 {l.vencimento ? new Date(l.vencimento).toLocaleDateString("pt-BR") : "-"}
 
 <br/><br/>
 
@@ -257,6 +226,13 @@ borderRadius:8
 
 <button onClick={()=>gerarPix(l)}>PIX</button>
 <button onClick={()=>cobrarWhatsApp(l)}>📲 WhatsApp</button>
+
+<button 
+onClick={()=>excluirLancamento(l.id)}
+style={{background:"#dc2626",color:"#fff"}}
+>
+🗑 Excluir
+</button>
 
 </div>
 
