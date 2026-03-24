@@ -9,7 +9,7 @@ const numero = cliente?.telefone || "";
 const [valor,setValor] = useState("");
 const [codigoPix,setCodigoPix] = useState("");
 
-// ================= GERAR PIX
+// ================= GERAR PIX PROFISSIONAL
 
 function gerarCodigoPix(valor){
 
@@ -18,19 +18,26 @@ alert("Cliente sem chave PIX");
 return "";
 }
 
-const nome = cliente?.nome || "CLIENTE";
-const cidade = "SAOPAULO";
+// 🔥 NOME CORRETO (QUEM RECEBE)
+const nome = "UNEMETAIS";
+
+// 🔥 CIDADE
+const cidade = "ITATIBA";
 
 const valorFormatado = Number(valor).toFixed(2);
 
+// função padrão
 function campo(id,valor){
 return id + valor.length.toString().padStart(2,"0") + valor;
 }
 
+// 🔥 ID ÚNICO DA COBRANÇA
+const txid = String(Date.now());
+
 let payload =
 "000201010212" +
 campo("26",
-campo("00","BR.GOV.BCB.PIX") +
+campo("00","br.gov.bcb.pix") +
 campo("01",chavePix)
 ) +
 campo("52","0000") +
@@ -38,9 +45,12 @@ campo("53","986") +
 campo("54",valorFormatado) +
 campo("58","BR") +
 campo("59",nome.substring(0,25)) +
-campo("60",cidade) +
-campo("62",campo("05","***"));
+campo("60",cidade.substring(0,15)) +
+campo("62",
+campo("05",txid)
+);
 
+// 🔥 CRC CORRETO
 function crc16(str){
 let crc = 0xFFFF;
 for(let c=0;c<str.length;c++){
@@ -53,7 +63,8 @@ crc &= 0xFFFF;
 return crc.toString(16).toUpperCase().padStart(4,"0");
 }
 
-payload += "6304" + crc16(payload + "6304");
+payload += "6304";
+payload += crc16(payload);
 
 return payload;
 }
@@ -89,13 +100,15 @@ alert("PIX copiado");
 
 }
 
-// ================= WHATSAPP
+// ================= VENCIMENTO
 
 function calcularVencimento(dias){
 const data = new Date();
 data.setDate(data.getDate() + dias);
 return data.toLocaleDateString("pt-BR");
 }
+
+// ================= WHATSAPP
 
 function enviarWhatsApp(dias){
 
@@ -113,8 +126,7 @@ const numeroFormatado = numero.replace(/\D/g,"");
 
 const vencimento = calcularVencimento(dias);
 
-const mensagem = `
-Olá ${cliente?.nome || ""}! Segue o PIX para pagamento:
+const mensagem = `Olá ${cliente?.nome || ""}! Segue o PIX para pagamento:
 
 💰 Valor: R$ ${Number(valor).toFixed(2)}
 📅 Vencimento: ${vencimento}

@@ -2,6 +2,66 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { QRCodeCanvas } from "qrcode.react";
 
+// 🔥 PIX CORRIGIDO
+function gerarPixBR(chave, nome, cidade, valor) {
+
+  function format(id, value) {
+    const size = value.length.toString().padStart(2, "0");
+    return id + size + value;
+  }
+
+  function limparTexto(txt, max) {
+    return txt
+      .toUpperCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .substring(0, max);
+  }
+
+  let pix = "";
+
+  pix += format("00", "01");
+
+  pix += format("26",
+    format("00", "br.gov.bcb.pix") +
+    format("01", chave)
+  );
+
+  pix += format("52", "0000");
+  pix += format("53", "986");
+
+  // 💰 VALOR CORRETO
+  pix += format("54", Number(valor).toFixed(2));
+
+  pix += format("58", "BR");
+
+  // ✅ NOME CORRIGIDO
+  pix += format("59", limparTexto(nome, 25));
+
+  // ✅ CIDADE CORRIGIDA
+  pix += format("60", limparTexto(cidade, 15));
+
+  // ID único
+  pix += format("62", format("05", String(Date.now()).slice(-10)));
+
+  // 🔒 CRC16
+  function crc16(str) {
+    let crc = 0xFFFF;
+    for (let i = 0; i < str.length; i++) {
+      crc ^= str.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) {
+        crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+      }
+    }
+    return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+  }
+
+  pix += "6304";
+  pix += crc16(pix);
+
+  return pix;
+}
+
 export default function Financeiro(){
 
 const [lancamentos,setLancamentos] = useState([]);
@@ -26,7 +86,6 @@ const { data: { user } } = await supabase.auth.getUser();
 
 if(!user){
 alert("Usuário não logado");
-setCarregando(false);
 return;
 }
 
@@ -36,19 +95,12 @@ const { data } = await supabase
 .eq("id", user.id)
 .maybeSingle();
 
-if(!data){
-alert("Usuário sem empresa vinculada");
-setCarregando(false);
-return;
-}
-
 setEmpresaId(data.empresa_id);
 
 await buscarPix(data.empresa_id);
 await carregarLancamentos(data.empresa_id);
 
-}catch(err){
-console.error("ERRO GERAL:", err);
+}catch{
 alert("Erro ao iniciar sistema");
 }finally{
 setCarregando(false);
@@ -56,10 +108,9 @@ setCarregando(false);
 
 }
 
-// ================= BUSCAR PIX
+// ================= PIX
 
 async function buscarPix(empId){
-
 const { data } = await supabase
 .from("empresas")
 .select("pix_chave")
@@ -67,13 +118,11 @@ const { data } = await supabase
 .maybeSingle();
 
 setPixChave(String(data?.pix_chave || ""));
-
 }
 
 // ================= LANCAMENTOS
 
 async function carregarLancamentos(empId){
-
 const { data } = await supabase
 .from("lancamentos")
 .select("*")
@@ -81,25 +130,6 @@ const { data } = await supabase
 .order("data_lancamento",{ascending:false});
 
 setLancamentos(data || []);
-
-}
-
-// ================= EXCLUIR
-
-async function excluir(id){
-
-setLancamentos(prev => prev.filter(l => l.id !== id));
-
-const { error } = await supabase
-.from("lancamentos")
-.delete()
-.eq("id",id);
-
-if(error){
-alert("Erro ao excluir");
-carregarLancamentos(empresaId);
-}
-
 }
 
 // ================= PIX
@@ -109,12 +139,10 @@ setPixAtual(l.id === pixAtual?.id ? null : l);
 }
 
 function gerarCodigoPix(valor){
+if(!pixChave) return "Sem PIX";
 
-if(!pixChave) return "";
-
-const valorFormatado = Number(valor || 0).toFixed(2);
-
-return `PIX:${pixChave}:${valorFormatado}`;
+// ✅ AQUI ESTÁ A CORREÇÃO PRINCIPAL
+return gerarPixBR(pixChave,"CUNHA FINANCE","ITATIBA",valor);
 }
 
 // ================= WHATSAPP
@@ -122,35 +150,27 @@ return `PIX:${pixChave}:${valorFormatado}`;
 function cobrarWhatsApp(l){
 
 let numero = (l.whatsapp || "").replace(/\D/g,"");
+if(numero.length === 11) numero = "55" + numero;
 
-if(numero.length === 11){
-numero = "55" + numero;
-}
-
-if(!numero){
-alert("Cliente sem WhatsApp");
-return;
-}
+const codigoPix = gerarCodigoPix(l.valor);
 
 const mensagem = `Olá ${l.cliente || ""} 👋
 
-🧾 ${l.descricao || ""}
-💰 Valor: R$ ${Number(l.valor).toFixed(2)}
+🧾 ${l.descricao}
+💰 R$ ${Number(l.valor).toFixed(2)}
+📦 Parcela ${l.parcela || 1}/${l.total_parcelas || 1}
+📅 Vencimento: ${l.vencimento || "-"}
 
-📲 PIX: ${pixChave || "Não cadastrado"}
+PIX:
+${codigoPix}`;
 
-Cunha Finance`;
-
-const link = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
-
-window.open(link,"_blank");
-
+window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
 }
 
-// ================= TELA
+// ================= UI
 
 if(carregando){
-return <div style={{padding:20,color:"#fff"}}>Iniciando sistema...</div>;
+return <div style={{padding:20,color:"#fff"}}>Carregando...</div>;
 }
 
 return(
@@ -172,38 +192,23 @@ marginBottom:15,
 borderRadius:8
 }}>
 
-<strong>{l.tipo}</strong>
-<br/>
-{l.descricao}
-<br/>
+<strong>{l.tipo}</strong><br/>
+{l.descricao}<br/>
 💰 R$ {Number(l.valor).toFixed(2)}
+
+<br/>
+
+📦 Parcela {l.parcela || 1}/{l.total_parcelas || 1}<br/>
+📅 {l.vencimento || "-"}
 
 <br/><br/>
 
-{/* 🔥 BOTÕES BONITOS */}
-<div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+<div style={{display:"flex",gap:10}}>
 
-<button style={{background:"#2563eb",color:"#fff",padding:10,borderRadius:6}}
-onClick={()=>gerarPix(l)}>
-PIX
-</button>
+<button onClick={()=>gerarPix(l)}>PIX</button>
 
-<button style={{background:"#22c55e",color:"#fff",padding:10,borderRadius:6}}
-onClick={()=>cobrarWhatsApp(l)}>
+<button onClick={()=>cobrarWhatsApp(l)}>
 📲 WhatsApp
-</button>
-
-<button style={{background:"#16a34a",color:"#fff",padding:10,borderRadius:6}}>
-📅 7 dias
-</button>
-
-<button style={{background:"#4ade80",color:"#fff",padding:10,borderRadius:6}}>
-📅 15 dias
-</button>
-
-<button style={{background:"#ef4444",color:"#fff",padding:10,borderRadius:6}}
-onClick={()=>excluir(l.id)}>
-🗑 Excluir
 </button>
 
 </div>
@@ -212,7 +217,7 @@ onClick={()=>excluir(l.id)}>
 
 <div style={{marginTop:10}}>
 
-<QRCodeCanvas value={codigoPix} size={150} />
+<QRCodeCanvas value={codigoPix} size={250} />
 
 <textarea value={codigoPix} readOnly style={{width:"100%"}} />
 

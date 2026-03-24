@@ -95,9 +95,71 @@ return;
 const lista = data || [];
 setClientes(lista);
 
+let ativosCount=0;
+let bloqueadosCount=0;
+let faturamentoTotal=0;
+
+const dias={};
+const meses={};
+
+lista.forEach(c=>{
+
+const statusCliente = c.status || "Ativo";
+
+if(statusCliente==="Ativo") ativosCount++;
+if(statusCliente==="Bloqueado") bloqueadosCount++;
+
+if(!c.isento){
+
+if(c.plano==="Básico") faturamentoTotal+=49;
+if(c.plano==="Premium") faturamentoTotal+=99;
+if(c.plano==="Enterprise") faturamentoTotal+=199;
+
 }
 
-// ================= CADASTRAR
+if(c.created_at){
+
+const dataCriacao = new Date(c.created_at);
+
+const dia = dataCriacao.toISOString().split("T")[0];
+const mes = dataCriacao.getMonth()+1;
+
+if(!dias[dia]) dias[dia]=0;
+if(!meses[mes]) meses[mes]=0;
+
+dias[dia]++;
+meses[mes]++;
+
+}
+
+});
+
+setAtivos(ativosCount);
+setBloqueados(bloqueadosCount);
+setFaturamento(faturamentoTotal);
+
+const nomesMes=[
+"Jan","Fev","Mar","Abr","Mai","Jun",
+"Jul","Ago","Set","Out","Nov","Dez"
+];
+
+setDadosDiarios(
+Object.keys(dias).map(d=>({
+dia:d,
+clientes:dias[d]
+}))
+);
+
+setDadosMensais(
+Object.keys(meses).map(m=>({
+mes:nomesMes[m-1],
+clientes:meses[m]
+}))
+);
+
+}
+
+// ================= CADASTRAR CLIENTE
 
 async function cadastrarCliente(){
 
@@ -204,16 +266,6 @@ carregarClientes();
 
 }
 
-// ================= ESTILO TD
-
-const td = {
-padding:"10px",
-borderBottom:"1px solid #1f2937",
-textAlign:"left",
-wordBreak:"break-word",
-maxWidth:"150px"
-};
-
 return(
 
 <div style={{padding:30,color:"#fff"}}>
@@ -278,23 +330,19 @@ flexWrap:"wrap"
 
 </div>
 
-<table style={{
-width:"100%",
-background:"#111827",
-borderCollapse:"collapse"
-}}>
+<table style={{width:"100%",background:"#111827"}}>
 
 <thead>
-<tr style={{borderBottom:"2px solid #374151"}}>
-<th style={td}>Tipo</th>
-<th style={td}>Nome</th>
-<th style={td}>Email</th>
-<th style={td}>CPF</th>
-<th style={td}>WhatsApp</th>
-<th style={td}>Plano</th>
-<th style={td}>Status</th>
-<th style={td}>Isento</th>
-<th style={td}>Ações</th>
+<tr>
+<th>Tipo</th>
+<th>Nome</th>
+<th>Email</th>
+<th>CPF</th>
+<th>WhatsApp</th>
+<th>Plano</th>
+<th>Status</th>
+<th>Isento</th>
+<th>Ações</th>
 </tr>
 </thead>
 
@@ -304,18 +352,16 @@ borderCollapse:"collapse"
 
 <tr key={c.id}>
 
-<td style={td}>{c.tipo}</td>
-<td style={td}>{c.name}</td>
-<td style={td}>{c.email}</td>
-<td style={td}>{c.cpf}</td>
-<td style={td}>{c.whatsapp}</td>
-<td style={td}>{c.plano}</td>
-<td style={td}>{c.status}</td>
-<td style={td}>{c.isento ? "Sim":"Não"}</td>
+<td>{c.tipo}</td>
+<td>{c.name}</td>
+<td>{c.email}</td>
+<td>{c.cpf}</td>
+<td>{c.whatsapp}</td>
+<td>{c.plano}</td>
+<td>{c.status}</td>
+<td>{c.isento ? "Sim":"Não"}</td>
 
-<td style={td}>
-
-<div style={{display:"flex",flexDirection:"column",gap:5}}>
+<td>
 
 <button onClick={()=>editarCliente(c)}>Editar</button>
 <button onClick={()=>gerarPix(c)}>PIX</button>
@@ -331,8 +377,6 @@ borderCollapse:"collapse"
 <button onClick={()=>excluirCliente(c.id)}>
 Excluir
 </button>
-
-</div>
 
 </td>
 

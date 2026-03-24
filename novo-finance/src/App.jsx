@@ -28,16 +28,15 @@ useEffect(()=>{
   return ()=> window.removeEventListener("resize",handleResize);
 },[]);
 
-// ================= SESSÃO
-
+// SESSÃO
 useEffect(()=>{
 
 async function carregarSessao(){
 
 try{
 
-const { data } = await supabase.auth.getSession();
-const user = data?.session?.user || null;
+const { data } = await supabase.auth.getUser();
+const user = data?.user || null;
 
 setSession(user ? { user } : null);
 
@@ -45,13 +44,16 @@ if(user){
 
 let { data:usuario } = await supabase
 .from("usuarios")
-.select("tipo_usuario,empresa_id")
+.select("role,empresa_id")
 .eq("id",user.id)
 .maybeSingle();
 
-// 🔥 CORREÇÃO AQUI
-setEmpresaId(usuario?.empresa_id || null);
-setRole(usuario?.tipo_usuario || "usuario");
+// 🔥 CORREÇÃO DEFINITIVA
+if(usuario?.empresa_id){
+  setEmpresaId(usuario.empresa_id);
+}
+
+setRole(usuario?.role || "cliente");
 
 }
 
@@ -68,19 +70,22 @@ carregarSessao();
 const { data:{ subscription } } =
 supabase.auth.onAuthStateChange(async (_event,newSession)=>{
 
-setSession(newSession ? { user: newSession.user } : null);
+setSession(newSession);
 
 if(newSession?.user){
 
 let { data:usuario } = await supabase
 .from("usuarios")
-.select("tipo_usuario,empresa_id")
+.select("role,empresa_id")
 .eq("id",newSession.user.id)
 .maybeSingle();
 
-// 🔥 CORREÇÃO AQUI
-setEmpresaId(usuario?.empresa_id || null);
-setRole(usuario?.tipo_usuario || "usuario");
+// 🔥 CORREÇÃO DEFINITIVA AQUI TAMBÉM
+if(usuario?.empresa_id){
+  setEmpresaId(usuario.empresa_id);
+}
+
+setRole(usuario?.role || "cliente");
 
 }
 
@@ -92,36 +97,32 @@ subscription?.unsubscribe();
 
 },[]);
 
-// ================= LOGOUT
-
+// LOGOUT
 async function sair(){
-try{
-  setSession(null);
-  setEmpresaId(null);
-  setRole(null);
-  setPagina("dashboard");
-
-  supabase.auth.signOut();
-
-}catch(err){
-  console.log("Erro ao sair:", err);
-}
+await supabase.auth.signOut();
+window.location.href="/";
 }
 
-// ================= LOADING
-
+// LOADING
 if(loadingSession){
 return <div style={{color:"#fff",padding:20}}>Iniciando sistema...</div>;
 }
 
-// ================= LOGIN
-
-if(!session?.user){
+// LOGIN
+if(!session){
 return <Login />;
 }
 
-// ================= APP
+// 🔥 NÃO TRAVA E NÃO SOME MAIS
+if(session && empresaId === null){
+return (
+<div style={{color:"#fff",padding:20}}>
+Carregando empresa... (aguarde)
+</div>
+);
+}
 
+// APP
 return(
 
 <div style={{
@@ -157,8 +158,7 @@ overflowX: isMobile ? "auto" : "visible"
 💰 Financeiro
 </button>
 
-{/* 🔥 ADMIN */}
-{role === "ADMIN" && (
+{role === "admin" && (
 <button onClick={()=>setPagina("lucro")} style={pagina==="lucro" ? botaoAtivo : botaoMenu}>
 📈 Lucro
 </button>
@@ -172,8 +172,7 @@ overflowX: isMobile ? "auto" : "visible"
 ⚙ Sistema
 </button>
 
-{/* 🔥 MASTER ADMIN */}
-{role === "ADMIN" && (
+{role === "admin" && (
 <button onClick={()=>setPagina("master")} style={pagina==="master" ? botaoAtivo : botaoMenu}>
 👑 Master Admin
 </button>
@@ -188,25 +187,18 @@ overflowX: isMobile ? "auto" : "visible"
 {/* CONTEÚDO */}
 <div style={{
 flex:1,
-display:"flex",
-justifyContent:"center",
-padding: isMobile ? 10 : 20
-}}>
-
-<div style={{
+padding: isMobile ? 10 : 30,
 width:"100%",
-maxWidth: isMobile ? "100%" : 800,
-margin:"0 auto"
+boxSizing:"border-box",
+overflow:"auto"
 }}>
 
 {pagina==="dashboard" && <Dashboard />}
 {pagina==="financeiro" && <Financeiro empresaId={empresaId} />}
-{pagina==="lucro" && role==="ADMIN" && <Lucro />}
+{pagina==="lucro" && role==="admin" && <Lucro />}
 {pagina==="despesas" && <DespesasPessoais />}
 {pagina==="admin" && <Admin />}
-{pagina==="master" && role==="ADMIN" && <MasterAdmin />}
-
-</div>
+{pagina==="master" && role==="admin" && <MasterAdmin />}
 
 </div>
 
@@ -216,8 +208,7 @@ margin:"0 auto"
 
 }
 
-// ================= ESTILOS
-
+// ESTILOS
 const botaoMenu={
 display:"block",
 width:"100%",
