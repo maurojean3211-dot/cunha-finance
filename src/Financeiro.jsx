@@ -29,22 +29,12 @@ function gerarPixBR(chave, nome, cidade, valor) {
 
   pix += format("52", "0000");
   pix += format("53", "986");
-
-  // 💰 VALOR CORRETO
   pix += format("54", Number(valor).toFixed(2));
-
   pix += format("58", "BR");
-
-  // ✅ NOME CORRIGIDO
   pix += format("59", limparTexto(nome, 25));
-
-  // ✅ CIDADE CORRIGIDA
   pix += format("60", limparTexto(cidade, 15));
-
-  // ID único
   pix += format("62", format("05", String(Date.now()).slice(-10)));
 
-  // 🔒 CRC16
   function crc16(str) {
     let crc = 0xFFFF;
     for (let i = 0; i < str.length; i++) {
@@ -140,9 +130,14 @@ setPixAtual(l.id === pixAtual?.id ? null : l);
 
 function gerarCodigoPix(valor){
 if(!pixChave) return "Sem PIX";
-
-// ✅ AQUI ESTÁ A CORREÇÃO PRINCIPAL
 return gerarPixBR(pixChave,"CUNHA FINANCE","ITATIBA",valor);
+}
+
+// ================= COPIAR PIX
+
+function copiarPix(codigo){
+navigator.clipboard.writeText(codigo);
+alert("PIX copiado!");
 }
 
 // ================= WHATSAPP
@@ -161,7 +156,7 @@ const mensagem = `Olá ${l.cliente || ""} 👋
 📦 Parcela ${l.parcela || 1}/${l.total_parcelas || 1}
 📅 Vencimento: ${l.vencimento || "-"}
 
-PIX:
+💳 Pague via PIX abaixo:
 ${codigoPix}`;
 
 window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
@@ -177,7 +172,7 @@ return(
 
 <div style={{padding:20}}>
 
-<h1>💰 Financeiro</h1>
+<h1>💰 CUNHA FINANCE</h1>
 
 {lancamentos.map(l=>{
 
@@ -207,9 +202,7 @@ borderRadius:8
 
 <button onClick={()=>gerarPix(l)}>PIX</button>
 
-<button onClick={()=>cobrarWhatsApp(l)}>
-📲 WhatsApp
-</button>
+<button onClick={()=>cobrarWhatsApp(l)}>📲 WhatsApp</button>
 
 </div>
 
@@ -219,7 +212,11 @@ borderRadius:8
 
 <QRCodeCanvas value={codigoPix} size={250} />
 
-<textarea value={codigoPix} readOnly style={{width:"100%"}} />
+<textarea value={codigoPix} readOnly style={{width:"100%",marginTop:10}} />
+
+<button onClick={()=>copiarPix(codigoPix)} style={{marginTop:10}}>
+📋 Copiar PIX
+</button>
 
 </div>
 
