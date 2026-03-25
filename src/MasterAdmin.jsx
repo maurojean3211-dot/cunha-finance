@@ -184,15 +184,28 @@ carregarClientes();
 
 }
 
-// ================= ESTILO TD (CORRIGIDO DE VERDADE)
+// ================= ESTILO MELHORADO
 
 const td = {
 padding:"10px",
 borderBottom:"1px solid #1f2937",
 textAlign:"left",
-whiteSpace:"normal",
-wordBreak:"break-word"
+whiteSpace:"nowrap",
+overflow:"hidden",
+textOverflow:"ellipsis",
+maxWidth:"120px",
+fontSize:"13px"
 };
+
+const btn = (bg) => ({
+padding:"6px 8px",
+fontSize:12,
+borderRadius:6,
+border:"none",
+cursor:"pointer",
+background:bg,
+color:"#fff"
+});
 
 return(
 
@@ -247,34 +260,37 @@ gap:10,
 flexWrap:"wrap"
 }}>
 
-<input placeholder="Nome" value={nome} onChange={e=>setNome(e.target.value)} />
-<input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-<input placeholder="CPF" value={cpf} onChange={e=>setCpf(e.target.value)} />
-<input placeholder="WhatsApp" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} />
+<input style={{padding:8,borderRadius:6}} placeholder="Nome" value={nome} onChange={e=>setNome(e.target.value)} />
+<input style={{padding:8,borderRadius:6}} placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+<input style={{padding:8,borderRadius:6}} placeholder="CPF" value={cpf} onChange={e=>setCpf(e.target.value)} />
+<input style={{padding:8,borderRadius:6}} placeholder="WhatsApp" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} />
 
-<button onClick={cadastrarCliente}>
+<button style={btn("#2563eb")} onClick={cadastrarCliente}>
 {editandoId ? "Salvar Alteração" : "Cadastrar Cliente"}
 </button>
 
 </div>
 
+<div style={{width:"100%",overflowX:"auto"}}>
+
 <table style={{
 width:"100%",
+minWidth:"1100px",
 background:"#111827",
 borderCollapse:"collapse"
 }}>
 
 <thead>
 <tr style={{borderBottom:"2px solid #374151"}}>
-<th style={{...td,width:"8%"}}>Tipo</th>
-<th style={{...td,width:"15%"}}>Nome</th>
-<th style={{...td,width:"18%"}}>Email</th>
-<th style={{...td,width:"10%"}}>CPF</th>
-<th style={{...td,width:"12%"}}>WhatsApp</th>
-<th style={{...td,width:"10%"}}>Plano</th>
-<th style={{...td,width:"10%"}}>Status</th>
-<th style={{...td,width:"7%"}}>Isento</th>
-<th style={{...td,width:"10%"}}>Ações</th>
+<th style={{...td,minWidth:"100px"}}>Tipo</th>
+<th style={{...td,minWidth:"140px"}}>Nome</th>
+<th style={{...td,minWidth:"180px"}}>Email</th>
+<th style={{...td,minWidth:"120px"}}>CPF</th>
+<th style={{...td,minWidth:"140px"}}>WhatsApp</th>
+<th style={{...td,minWidth:"100px"}}>Plano</th>
+<th style={{...td,minWidth:"100px"}}>Status</th>
+<th style={{...td,minWidth:"80px"}}>Isento</th>
+<th style={{...td,minWidth:"140px"}}>Ações</th>
 </tr>
 </thead>
 
@@ -295,20 +311,24 @@ borderCollapse:"collapse"
 
 <td style={td}>
 
-<div style={{display:"flex",flexDirection:"column",gap:5}}>
+<div style={{
+display:"flex",
+flexDirection:"column",
+gap:6
+}}>
 
-<button onClick={()=>editarCliente(c)}>Editar</button>
-<button onClick={()=>gerarPix(c)}>PIX</button>
+<button style={btn("#2563eb")} onClick={()=>editarCliente(c)}>Editar</button>
+<button style={btn("#22c55e")} onClick={()=>gerarPix(c)}>PIX</button>
 
-<button onClick={()=>alterarStatus(c)}>
+<button style={btn("#f59e0b")} onClick={()=>alterarStatus(c)}>
 {c.status==="Ativo"?"Bloquear":"Ativar"}
 </button>
 
-<button onClick={()=>alternarIsencao(c)}>
+<button style={btn("#9333ea")} onClick={()=>alternarIsencao(c)}>
 {c.isento?"Remover Isenção":"Isentar"}
 </button>
 
-<button onClick={()=>excluirCliente(c.id)}>
+<button style={btn("#ef4444")} onClick={()=>excluirCliente(c.id)}>
 Excluir
 </button>
 
@@ -323,6 +343,8 @@ Excluir
 </tbody>
 
 </table>
+
+</div>
 
 </div>
 

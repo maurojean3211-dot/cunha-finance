@@ -16,8 +16,6 @@ export default function Clientes() {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    console.log("USER LOGADO:", user); // 🔥 LOG 1
-
     if (!user) {
       alert("Usuário não logado");
       return;
@@ -29,16 +27,13 @@ export default function Clientes() {
       .eq("id", user.id)
       .single();
 
-    console.log("DADOS USUARIO:", data); // 🔥 LOG 2
-    console.log("ERRO:", error); // 🔥 LOG 3
-
     if (error || !data) {
-      alert("Usuário não encontrado na tabela 'usuarios'");
+      alert("Usuário não encontrado");
       return;
     }
 
     if (!data.empresa_id) {
-      alert("Usuário sem empresa vinculada");
+      alert("Usuário sem empresa");
       return;
     }
 
@@ -110,6 +105,7 @@ export default function Clientes() {
 
   }
 
+  // 🔥 EXCLUIR CORRIGIDO (SEGURO)
   async function excluirCliente(id) {
 
     if (!window.confirm("Excluir cliente?")) return;
@@ -117,7 +113,8 @@ export default function Clientes() {
     const { error } = await supabase
       .from("clientes")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("empresa_id", empresaId); // 🔒 PROTEÇÃO
 
     if (error) {
       console.log(error);

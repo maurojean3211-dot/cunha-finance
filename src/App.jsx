@@ -11,7 +11,6 @@ import DespesasPessoais from "./DespesasPessoais.jsx";
 
 export default function App(){
 
-// STATES
 const [session,setSession] = useState(null);
 const [loadingSession,setLoadingSession] = useState(true);
 const [pagina,setPagina] = useState("dashboard");
@@ -21,15 +20,14 @@ const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
 
 // RESPONSIVO
 useEffect(()=>{
-  function handleResize(){
-    setIsMobile(window.innerWidth < 768);
-  }
-  window.addEventListener("resize",handleResize);
-  return ()=> window.removeEventListener("resize",handleResize);
+function handleResize(){
+setIsMobile(window.innerWidth < 768);
+}
+window.addEventListener("resize",handleResize);
+return ()=> window.removeEventListener("resize",handleResize);
 },[]);
 
 // ================= SESSÃO
-
 useEffect(()=>{
 
 async function carregarSessao(){
@@ -49,7 +47,6 @@ let { data:usuario } = await supabase
 .eq("id",user.id)
 .maybeSingle();
 
-// 🔥 CORREÇÃO AQUI
 setEmpresaId(usuario?.empresa_id || null);
 setRole(usuario?.tipo_usuario || "usuario");
 
@@ -78,7 +75,6 @@ let { data:usuario } = await supabase
 .eq("id",newSession.user.id)
 .maybeSingle();
 
-// 🔥 CORREÇÃO AQUI
 setEmpresaId(usuario?.empresa_id || null);
 setRole(usuario?.tipo_usuario || "usuario");
 
@@ -93,35 +89,29 @@ subscription?.unsubscribe();
 },[]);
 
 // ================= LOGOUT
-
 async function sair(){
 try{
-  setSession(null);
-  setEmpresaId(null);
-  setRole(null);
-  setPagina("dashboard");
-
-  supabase.auth.signOut();
-
+setSession(null);
+setEmpresaId(null);
+setRole(null);
+setPagina("dashboard");
+supabase.auth.signOut();
 }catch(err){
-  console.log("Erro ao sair:", err);
+console.log("Erro ao sair:", err);
 }
 }
 
 // ================= LOADING
-
 if(loadingSession){
 return <div style={{color:"#fff",padding:20}}>Iniciando sistema...</div>;
 }
 
 // ================= LOGIN
-
 if(!session?.user){
-return <Login />;
+return <Login onLogin={(user) => setSession({ user })} />;
 }
 
 // ================= APP
-
 return(
 
 <div style={{
@@ -130,16 +120,18 @@ flexDirection: isMobile ? "column" : "row",
 width:"100%",
 minHeight:"100vh",
 background:"#020617",
-color:"#fff"
+color:"#fff",
+fontFamily:"Arial, sans-serif"
 }}>
 
 {/* MENU */}
+
 <div style={{
 width: isMobile ? "100%" : 220,
 background:"#020617",
 borderRight: isMobile ? "none" : "1px solid #1e293b",
 borderBottom: isMobile ? "1px solid #1e293b" : "none",
-padding:10,
+padding:15,
 display:"flex",
 flexDirection: isMobile ? "row" : "column",
 flexWrap: isMobile ? "wrap" : "nowrap",
@@ -147,58 +139,58 @@ gap:10,
 overflowX: isMobile ? "auto" : "visible"
 }}>
 
-<h2 style={{whiteSpace:"nowrap", width:"100%"}}>Cunha Finance</h2>
+{/* 🔥 LOGO REMOVIDO PARA NÃO TRAVAR */}
+{/* <img src="/logo.png" style={{ width: "120px", margin: "0 auto 10px auto", display: "block" }} /> */}
+
+<h2 style={{whiteSpace:"nowrap", width:"100%", marginBottom:10}}>
+Cunha Finance
+</h2>
 
 <button onClick={()=>setPagina("dashboard")} style={pagina==="dashboard" ? botaoAtivo : botaoMenu}>
-📊 Dashboard
-</button>
+📊 Dashboard </button>
 
 <button onClick={()=>setPagina("financeiro")} style={pagina==="financeiro" ? botaoAtivo : botaoMenu}>
-💰 Financeiro
-</button>
+💰 Financeiro </button>
 
-{/* 🔥 ADMIN */}
 {role === "ADMIN" && (
 <button onClick={()=>setPagina("lucro")} style={pagina==="lucro" ? botaoAtivo : botaoMenu}>
-📈 Lucro
-</button>
+📈 Lucro </button>
 )}
 
 <button onClick={()=>setPagina("despesas")} style={pagina==="despesas" ? botaoAtivo : botaoMenu}>
-💳 Pessoal
-</button>
+💳 Pessoal </button>
 
 <button onClick={()=>setPagina("admin")} style={pagina==="admin" ? botaoAtivo : botaoMenu}>
-⚙ Sistema
-</button>
+⚙ Sistema </button>
 
-{/* 🔥 MASTER ADMIN */}
 {role === "ADMIN" && (
 <button onClick={()=>setPagina("master")} style={pagina==="master" ? botaoAtivo : botaoMenu}>
-👑 Master Admin
-</button>
+👑 Master Admin </button>
 )}
 
 <button onClick={sair} style={{...botaoMenu, background:"#ef4444"}}>
-🚪 Sair
-</button>
+🚪 Sair </button>
 
 </div>
 
 {/* CONTEÚDO */}
+
 <div style={{
 flex:1,
 display:"flex",
 justifyContent:"center",
-padding: isMobile ? 10 : 20
+padding: isMobile ? 10 : 30
 }}>
 
 <div style={{
 width:"100%",
-maxWidth: isMobile ? "100%" : 800,
-margin:"0 auto"
+maxWidth:"1200px",
+margin:"0 auto",
+padding:20,
+borderRadius:12
 }}>
 
+{/* 🔥 PROTEÇÃO: evita travar */}
 {pagina==="dashboard" && <Dashboard />}
 {pagina==="financeiro" && <Financeiro empresaId={empresaId} />}
 {pagina==="lucro" && role==="ADMIN" && <Lucro />}
@@ -221,21 +213,22 @@ margin:"0 auto"
 const botaoMenu={
 display:"block",
 width:"100%",
-padding:10,
+padding:"10px",
 background:"#111827",
-color:"#fff",
+color:"#cbd5f5",
 border:"none",
-borderRadius:6,
-cursor:"pointer"
+borderRadius:8,
+cursor:"pointer",
+transition:"0.2s"
 };
 
 const botaoAtivo={
 display:"block",
 width:"100%",
-padding:10,
+padding:"10px",
 background:"#2563eb",
 color:"#fff",
 border:"none",
-borderRadius:6,
+borderRadius:8,
 cursor:"pointer"
 };

@@ -5,6 +5,8 @@ import { QRCodeCanvas } from "qrcode.react";
 // 🔥 PIX
 function gerarPixBR(chave, nome, cidade, valor) {
 
+  chave = String(chave).replace(/\D/g, "");
+
   function format(id, value) {
     const size = value.length.toString().padStart(2, "0");
     return id + size + value;
@@ -60,8 +62,7 @@ const [pixAtual,setPixAtual] = useState(null);
 const [pixChave,setPixChave] = useState("");
 const [empresaId,setEmpresaId] = useState(null);
 
-// ================= INIT
-
+// INIT
 useEffect(()=>{
 iniciar();
 },[]);
@@ -104,8 +105,7 @@ setCarregando(false);
 
 }
 
-// ================= PIX
-
+// PIX
 async function buscarPix(empId){
 const { data } = await supabase
 .from("empresas")
@@ -116,20 +116,19 @@ const { data } = await supabase
 setPixChave(String(data?.pix_chave || ""));
 }
 
-// ================= LANCAMENTOS
-
+// LANCAMENTOS
 async function carregarLancamentos(empId){
 const { data } = await supabase
 .from("lancamentos")
 .select("*")
 .eq("empresa_id",empId)
-.order("data_lancamento",{ascending:false});
+.order("data_lancamento",{ascending:false})
+.limit(50);
 
 setLancamentos(data || []);
 }
 
-// ================= EXCLUIR 🔥 (CORRIGIDO)
-
+// 🔥 EXCLUIR (CORRIGIDO COM SEGURANÇA)
 async function excluirLancamento(id){
 
 try{
@@ -145,7 +144,8 @@ if(!confirmar) return;
 const { error } = await supabase
 .from("lancamentos")
 .delete()
-.eq("id", id);
+.eq("id", id)
+.eq("empresa_id", empresaId); // 🔥 CORREÇÃO
 
 if(error){
 console.log(error);
@@ -154,8 +154,6 @@ return;
 }
 
 alert("Excluído com sucesso!");
-
-// 🔥 ATUALIZA CERTO
 await carregarLancamentos(empresaId);
 
 }catch(e){
@@ -165,52 +163,44 @@ alert("Erro inesperado ao excluir");
 
 }
 
-// ================= PIX
-
+// PIX UI
 function gerarPix(l){
 setPixAtual(l.id === pixAtual?.id ? null : l);
 }
 
-function gerarCodigoPix(valor){
-if(!pixChave) return "Sem PIX";
-return gerarPixBR(pixChave,"CUNHA FINANCE","ITATIBA",valor);
+// 🔥 SIMPLES
+function gerarCodigoPix(){
+return String(pixChave).replace(/\D/g,"");
 }
 
-// ================= COPIAR PIX
-
+// COPIAR
 function copiarPix(codigo){
 navigator.clipboard.writeText(codigo);
 alert("PIX copiado!");
 }
 
-// ================= WHATSAPP
-
+// 🔥 WHATSAPP
 function cobrarWhatsApp(l){
 
 let numero = (l.whatsapp || "").replace(/\D/g,"");
 if(numero.length === 11) numero = "55" + numero;
 
-const codigoPix = gerarCodigoPix(l.valor);
+const mensagem = `Olá 😊
 
-const dataFormatada = l.vencimento
-? new Date(l.vencimento).toLocaleDateString("pt-BR")
-: "-";
+📱 ${l.descricao || "Produto"}
+💰 Valor: R$ ${Number(l.valor).toFixed(2).replace(".",",")}
 
-const mensagem = `Olá ${l.cliente || ""} 👋
+PIX: ${String(pixChave).replace(/\D/g,"")}
 
-🧾 ${l.descricao}
-💰 R$ ${Number(l.valor).toFixed(2)}
-📦 Parcela ${l.parcela || 1}/${l.total_parcelas || 1}
-📅 Vencimento: ${dataFormatada}
+Pode realizar o pagamento hoje?
+Fico no aguardo do comprovante 👍
 
-💳 Pague via PIX:
-${codigoPix}`;
+Cunha Finance`;
 
 window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`);
 }
 
-// ================= UI
-
+// UI
 if(carregando){
 return <div style={{padding:20,color:"#fff"}}>Carregando...</div>;
 }
@@ -223,7 +213,7 @@ return(
 
 {lancamentos.map(l=>{
 
-const codigoPix = gerarCodigoPix(l.valor);
+const codigoPix = gerarCodigoPix();
 
 return(
 
@@ -236,7 +226,7 @@ borderRadius:8
 
 <strong>{l.tipo}</strong><br/>
 {l.descricao}<br/>
-💰 R$ {Number(l.valor).toFixed(2)}
+💰 R$ {Number(l.valor).toFixed(2).replace(".",",")}
 
 <br/>
 
@@ -263,9 +253,10 @@ style={{background:"#dc2626",color:"#fff"}}
 
 <div style={{marginTop:10}}>
 
-<QRCodeCanvas value={codigoPix} size={250} />
-
-<textarea value={codigoPix} readOnly style={{width:"100%",marginTop:10}} />
+<div style={{background:"#111",padding:10,borderRadius:6}}>
+<strong>Chave PIX:</strong>
+<div style={{marginTop:5,color:"#00ff88"}}>{codigoPix}</div>
+</div>
 
 <button onClick={()=>copiarPix(codigoPix)} style={{marginTop:10}}>
 📋 Copiar PIX

@@ -21,56 +21,52 @@ new Date().toISOString().split("T")[0]
 const [empresaId,setEmpresaId] = useState(null);
 const [carregando,setCarregando] = useState(false);
 
-// ================= INIT
-
+// INIT
 useEffect(()=>{
 buscarEmpresa();
 },[]);
 
-// ================= GERAR PARCELAS
-
+// GERAR PARCELAS
 function gerarParcelas(valorTotal, quantidade, dataInicial, intervaloDias){
 
-  if(!dataInicial) return [];
+if(!dataInicial) return [];
 
-  const lista = [];
-  const valorParcela = (valorTotal / quantidade).toFixed(2);
+const lista = [];
+const valorParcela = (valorTotal / quantidade).toFixed(2);
 
-  let base = new Date(dataInicial);
+let base = new Date(dataInicial);
 
-  for(let i = 1; i <= quantidade; i++){
+for(let i = 1; i <= quantidade; i++){
 
-    let nova = new Date(base);
-    nova.setDate(base.getDate() + (intervaloDias * (i - 1)));
+let nova = new Date(base);
+nova.setDate(base.getDate() + (intervaloDias * (i - 1)));
 
-    lista.push({
-      parcela: i,
-      total_parcelas: quantidade,
-      valor: valorParcela,
-      vencimento: nova.toISOString().split("T")[0]
-    });
+lista.push({
+parcela: i,
+total_parcelas: quantidade,
+valor: valorParcela,
+vencimento: nova.toISOString().split("T")[0]
+});
 
-  }
-
-  return lista;
 }
 
-// ================= SELECIONAR CLIENTE
+return lista;
+}
 
+// SELECIONAR CLIENTE
 function selecionarCliente(id){
 
-  setClienteId(id);
+setClienteId(id);
 
-  const cliente = clientes.find(c => c.id == id);
+const cliente = clientes.find(c => c.id == id);
 
-  if(cliente){
-    setClienteWhatsapp(cliente.whatsapp || "");
-  }
+if(cliente){
+setClienteWhatsapp(cliente.telefone || "");
+}
 
 }
 
-// ================= BUSCAR EMPRESA
-
+// BUSCAR EMPRESA
 async function buscarEmpresa(){
 
 const { data:{ user } } = await supabase.auth.getUser();
@@ -88,8 +84,7 @@ buscarDados(data?.empresa_id);
 
 }
 
-// ================= BUSCAR DADOS
-
+// BUSCAR DADOS
 async function buscarDados(empresa_id){
 
 if(!empresa_id) return;
@@ -103,16 +98,14 @@ setClientes(clientesData || []);
 
 }
 
-// ================= CALCULOS
-
+// CALCULOS
 const qtd = Number(quantidade) || 0;
 const preco = Number(precoUnitario) || 0;
 
 const valorTotal = preco * qtd;
 const valorParcela = parcelas > 0 ? valorTotal / parcelas : valorTotal;
 
-// ================= SALVAR VENDA
-
+// SALVAR VENDA
 async function salvarVenda(){
 
 if(carregando) return;
@@ -131,6 +124,20 @@ setCarregando(true);
 try{
 
 const { data:{ user } } = await supabase.auth.getUser();
+
+// 🔒 valida cliente da empresa
+const { data:clienteCheck } = await supabase
+.from("clientes")
+.select("id")
+.eq("id", clienteId)
+.eq("empresa_id", empresaId)
+.single();
+
+if(!clienteCheck){
+alert("Cliente inválido");
+setCarregando(false);
+return;
+}
 
 // salva venda
 await supabase.from("vendas").insert([{
@@ -151,22 +158,20 @@ dataInicial,
 Number(intervalo)
 );
 
-// salva financeiro
-for(const p of lista){
-
-await supabase.from("lancamentos").insert({
+// 🔥 INSERT EM LOTE (MELHOR)
+const lancamentos = lista.map(p => ({
 empresa_id: empresaId,
 tipo: "RECEBER",
 descricao: "Venda parcelada",
-cliente: clienteId,
+cliente_id: clienteId,
 whatsapp: clienteWhatsapp,
 valor: p.valor,
 parcela: p.parcela,
 total_parcelas: p.total_parcelas,
 vencimento: p.vencimento
-});
+}));
 
-}
+await supabase.from("lancamentos").insert(lancamentos);
 
 alert("Venda registrada com parcelas!");
 
@@ -175,6 +180,7 @@ setPrecoUnitario("");
 setParcelas(1);
 
 }catch(e){
+console.log(e);
 alert("Erro ao salvar venda");
 }
 
@@ -182,8 +188,7 @@ setCarregando(false);
 
 }
 
-// ================= UI
-
+// UI
 return(
 
 <div style={{padding:20,maxWidth:500}}>
