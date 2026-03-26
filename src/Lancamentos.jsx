@@ -25,15 +25,49 @@ async function carregarEmpresa(){
 const { data:{user} } = await supabase.auth.getUser();
 if(!user) return;
 
-const { data,error } = await supabase
+let { data,error } = await supabase
 .from("usuarios")
 .select("empresa_id")
 .eq("id",user.id)
-.single();
+.maybeSingle();
 
 if(error){
 console.log("Erro usuario:",error);
 return;
+}
+
+// 🔥 SE NÃO EXISTIR USUARIO → CRIA
+if(!data){
+await supabase.from("usuarios").insert([
+{
+id:user.id,
+email:user.email,
+nome:user.email
+}
+]);
+data = {};
+}
+
+// 🔥 SE NÃO EXISTIR EMPRESA → CRIA
+if(!data?.empresa_id){
+
+const { data: novaEmpresa } = await supabase
+.from("empresas")
+.insert([
+{
+name:"Minha Empresa",
+user_id:user.id
+}
+])
+.select()
+.single();
+
+await supabase
+.from("usuarios")
+.update({ empresa_id:novaEmpresa.id })
+.eq("id",user.id);
+
+data = { empresa_id:novaEmpresa.id };
 }
 
 if(data){
@@ -66,16 +100,25 @@ setLancamentos(data || []);
 
 async function salvarLancamento(){
 
-if(!empresaId){
-alert("Empresa não encontrada");
-return;
-}
-
 const { data:{user} } = await supabase.auth.getUser();
 if(!user){
 alert("Usuário não logado");
 return;
 }
+
+// 🔥 BUSCA EMPRESA NA HORA
+const { data: usuario } = await supabase
+.from("usuarios")
+.select("empresa_id")
+.eq("id", user.id)
+.single();
+
+if(!usuario?.empresa_id){
+alert("Empresa não encontrada");
+return;
+}
+
+const empId = usuario.empresa_id;
 
 if(!descricao || !valor){
 alert("Preencha descrição e valor");
@@ -98,7 +141,7 @@ ano,
 data_lancamento:dataLancamento
 })
 .eq("id",editandoId)
-.eq("empresa_id",empresaId);
+.eq("empresa_id",empId);
 
 if(error){
 console.log(error);
@@ -118,7 +161,7 @@ descricao,
 valor:Number(valor),
 mes,
 ano,
-empresa_id:empresaId,
+empresa_id: empId,
 user_id:user.id,
 data_lancamento:dataLancamento,
 tipo:"receita"
@@ -137,7 +180,7 @@ setDescricao("");
 setValor("");
 setDataLancamento(new Date().toISOString().split("T")[0]);
 
-carregarLancamentos(empresaId);
+carregarLancamentos(empId);
 
 }
 
@@ -155,17 +198,28 @@ setEditandoId(l.id);
 
 }
 
-// ================= EXCLUIR
+// ================= EXCLUIR (🔥 CORRIGIDO)
 
 async function excluirLancamento(id){
 
 if(!window.confirm("Excluir lançamento?")) return;
 
+// 🔥 BUSCA EMPRESA NA HORA
+const { data:{user} } = await supabase.auth.getUser();
+
+const { data: usuario } = await supabase
+.from("usuarios")
+.select("empresa_id")
+.eq("id", user.id)
+.single();
+
+const empId = usuario?.empresa_id;
+
 const { error } = await supabase
 .from("lancamentos")
 .delete()
 .eq("id",id)
-.eq("empresa_id",empresaId);
+.eq("empresa_id",empId);
 
 if(error){
 console.log(error);
@@ -173,7 +227,7 @@ alert("Erro ao excluir");
 return;
 }
 
-carregarLancamentos(empresaId);
+carregarLancamentos(empId);
 
 }
 
