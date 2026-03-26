@@ -43,15 +43,34 @@ alert("Usuário não logado");
 return;
 }
 
-const { data } = await supabase
+// 🔥 BUSCA USUARIO
+let { data, error } = await supabase
 .from("usuarios")
 .select("empresa_id")
 .eq("id",user.id)
 .single();
 
-if(!data?.empresa_id){
-alert("Empresa não encontrada");
-return;
+// 🔥 SE NÃO EXISTIR EMPRESA → CRIA AUTOMATICO
+if(!data || !data.empresa_id){
+
+const { data: novaEmpresa } = await supabase
+.from("empresas")
+.insert([
+{
+nome: "Minha Empresa",
+user_id: user.id
+}
+])
+.select()
+.single();
+
+// atualiza usuario com empresa
+await supabase
+.from("usuarios")
+.update({ empresa_id: novaEmpresa.id })
+.eq("id", user.id);
+
+data = { empresa_id: novaEmpresa.id };
 }
 
 setEmpresaId(data.empresa_id);
@@ -152,8 +171,6 @@ return(
 
 <h2 style={{marginBottom:20}}>📊 Dashboard</h2>
 
-{/* RESUMO */}
-
 <div style={{
 display:"grid",
 gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",
@@ -166,8 +183,6 @@ marginBottom:25
 <Card titulo="🏦 Saldo" valor={saldo}/>
 
 </div>
-
-{/* GRÁFICOS */}
 
 <div style={{
 display:"grid",
@@ -215,10 +230,8 @@ gap:20
 
 }
 
-// CARD MELHORADO
 function Card({titulo,valor}){
 return(
-
 <div style={{
 background:"#111827",
 padding:20,

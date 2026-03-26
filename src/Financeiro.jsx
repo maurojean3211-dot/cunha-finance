@@ -80,15 +80,32 @@ alert("Usuário não logado");
 return;
 }
 
-const { data } = await supabase
+let { data } = await supabase
 .from("usuarios")
 .select("empresa_id")
 .eq("id", user.id)
 .maybeSingle();
 
+// 🔥 SE NÃO TEM EMPRESA → CRIA
 if(!data?.empresa_id){
-alert("Empresa não encontrada");
-return;
+
+const { data: novaEmpresa } = await supabase
+.from("empresas")
+.insert([
+{
+nome: "Minha Empresa",
+user_id: user.id
+}
+])
+.select()
+.single();
+
+await supabase
+.from("usuarios")
+.update({ empresa_id: novaEmpresa.id })
+.eq("id", user.id);
+
+data = { empresa_id: novaEmpresa.id };
 }
 
 setEmpresaId(data.empresa_id);
@@ -128,7 +145,7 @@ const { data } = await supabase
 setLancamentos(data || []);
 }
 
-// 🔥 EXCLUIR (CORRIGIDO COM SEGURANÇA)
+// 🔥 EXCLUIR
 async function excluirLancamento(id){
 
 try{
@@ -145,7 +162,7 @@ const { error } = await supabase
 .from("lancamentos")
 .delete()
 .eq("id", id)
-.eq("empresa_id", empresaId); // 🔥 CORREÇÃO
+.eq("empresa_id", empresaId);
 
 if(error){
 console.log(error);
@@ -168,7 +185,7 @@ function gerarPix(l){
 setPixAtual(l.id === pixAtual?.id ? null : l);
 }
 
-// 🔥 SIMPLES
+// SIMPLES
 function gerarCodigoPix(){
 return String(pixChave).replace(/\D/g,"");
 }
@@ -179,7 +196,7 @@ navigator.clipboard.writeText(codigo);
 alert("PIX copiado!");
 }
 
-// 🔥 WHATSAPP
+// WHATSAPP
 function cobrarWhatsApp(l){
 
 let numero = (l.whatsapp || "").replace(/\D/g,"");
