@@ -139,9 +139,6 @@ gap:10,
 overflowX: isMobile ? "auto" : "visible"
 }}>
 
-{/* 🔥 LOGO REMOVIDO PARA NÃO TRAVAR */}
-{/* <img src="/logo.png" style={{ width: "120px", margin: "0 auto 10px auto", display: "block" }} /> */}
-
 <h2 style={{whiteSpace:"nowrap", width:"100%", marginBottom:10}}>
 Cunha Finance
 </h2>
@@ -184,13 +181,12 @@ padding: isMobile ? 10 : 30
 
 <div style={{
 width:"100%",
-maxWidth:"1200px",
+maxWidth:"100%", // 🔥 CORREÇÃO AQUI (ANTES ERA 1200px)
 margin:"0 auto",
 padding:20,
 borderRadius:12
 }}>
 
-{/* 🔥 PROTEÇÃO: evita travar */}
 {pagina==="dashboard" && <Dashboard />}
 {pagina==="financeiro" && <Financeiro empresaId={empresaId} />}
 {pagina==="lucro" && role==="ADMIN" && <Lucro />}

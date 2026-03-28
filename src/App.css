@@ -1,11 +1,27 @@
+/* ===== RESET SEGURO ===== */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
 /* ===== GERAL ===== */
 
 body{
-margin:0;
 background:#020617;
-color:white;
+color:#fff;
 font-family:Arial, Helvetica, sans-serif;
-overflow-y:auto;
+min-height:100vh;
+overflow-x:hidden;
+}
+
+/* ===== ROOT ===== */
+
+#root{
+width:100%;
+max-width:100vw;
+overflow-x:hidden;
 }
 
 /* ===== LAYOUT ===== */
@@ -13,7 +29,6 @@ overflow-y:auto;
 .app-container{
 display:flex;
 min-height:100vh;
-position:relative;
 }
 
 /* ===== MENU LATERAL ===== */
@@ -33,7 +48,7 @@ display:flex;
 flex-direction:column;
 }
 
-/* ===== BOTÕES DO MENU ===== */
+/* ===== BOTÕES MENU ===== */
 
 .menu-lateral button{
 width:100%;
@@ -66,7 +81,7 @@ padding:12px;
 margin-bottom:12px;
 
 background:#111827;
-color:white;
+color:#fff;
 
 border:1px solid #475569;
 border-radius:6px;
@@ -84,7 +99,7 @@ padding:12px;
 margin-bottom:12px;
 
 background:#111827;
-color:white;
+color:#fff;
 
 border:1px solid #475569;
 border-radius:6px;
@@ -103,19 +118,56 @@ color:#000000;
 /* ===== BOTÕES ===== */
 
 button{
-padding:12px 20px;
+padding:10px 14px;
 border-radius:6px;
 border:none;
 
 background:#3b82f6;
-color:white;
+color:#fff;
 
 cursor:pointer;
 font-weight:bold;
+width:auto; /* 🔥 evita botão gigante */
 }
 
 button:hover{
 opacity:0.9;
+}
+
+/* ===== BOTÃO FORM ===== */
+
+.botao-form{
+width:200px;
+align-self:flex-start;
+margin-top:10px;
+}
+
+/* ===== TABELA ===== */
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+table-layout:auto; /* 🔥 importante pra colunas aparecerem */
+}
+
+th, td{
+padding:10px;
+text-align:left;
+border-bottom:1px solid #334155;
+font-size:13px;
+white-space:nowrap; /* 🔥 evita quebrar coluna */
+}
+
+tr:hover{
+background:#020617;
+}
+
+/* ===== SCROLL HORIZONTAL TABELA ===== */
+
+table{
+display:block;
+overflow-x:auto;
 }
 
 /* ===== DIVISÃO ===== */
@@ -129,6 +181,7 @@ margin:30px 0;
 
 ::-webkit-scrollbar{
 width:8px;
+height:8px;
 }
 
 ::-webkit-scrollbar-track{
@@ -138,4 +191,19 @@ background:#020617;
 ::-webkit-scrollbar-thumb{
 background:#334155;
 border-radius:4px;
+}
+
+/* ===== RESPONSIVO ===== */
+
+@media(max-width:768px){
+
+input,
+select{
+width:100%;
+}
+
+button{
+width:100%;
+}
+
 }

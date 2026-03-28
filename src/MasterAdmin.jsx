@@ -3,6 +3,8 @@ import { supabase } from "./supabase";
 
 export default function MasterAdmin(){
 
+console.log("MASTER CERTO AGORA");
+
 const [clientes,setClientes]=useState([]);
 
 const [tipo,setTipo]=useState("Empresa");
@@ -14,6 +16,8 @@ const [whatsapp,setWhatsapp]=useState("");
 const [plano,setPlano]=useState("Básico");
 const [status,setStatus]=useState("Ativo");
 
+const [valorMensal,setValorMensal]=useState("");
+
 const [editandoId,setEditandoId]=useState(null);
 
 const [pixQr,setPixQr]=useState("");
@@ -23,20 +27,15 @@ useEffect(()=>{
 carregarClientes();
 },[]);
 
-// ================= GERAR PIX
+// ================= PIX
 
 async function gerarPix(cliente){
 
-let valor=49;
-
-if(cliente.plano==="Premium") valor=99;
-if(cliente.plano==="Enterprise") valor=199;
+let valor = Number(cliente.valor_mensal) || 49;
 
 const response = await fetch("/api/pix",{
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+headers:{ "Content-Type":"application/json" },
 body:JSON.stringify({
 nome:cliente.name,
 email:cliente.email,
@@ -56,19 +55,14 @@ alert("Erro ao gerar PIX");
 
 }
 
-// ================= CARREGAR CLIENTES
+// ================= CARREGAR
 
 async function carregarClientes(){
 
-const { data, error } = await supabase
+const { data } = await supabase
 .from("empresas")
 .select("*")
 .order("created_at",{ascending:false});
-
-if(error){
-console.log(error);
-return;
-}
 
 setClientes(data || []);
 
@@ -79,9 +73,11 @@ setClientes(data || []);
 async function cadastrarCliente(){
 
 if(!nome){
-alert("Preencha o nome da empresa");
+alert("Preencha o nome");
 return;
 }
+
+const valorConvertido = valorMensal ? Number(valorMensal) : null;
 
 if(editandoId){
 
@@ -89,9 +85,10 @@ await supabase
 .from("empresas")
 .update({
 name:nome,
-email:email,
-cpf:cpf,
-whatsapp:whatsapp
+email,
+cpf,
+whatsapp,
+valor_mensal: valorConvertido
 })
 .eq("id",editandoId);
 
@@ -101,18 +98,17 @@ setEditandoId(null);
 
 await supabase
 .from("empresas")
-.insert([
-{
+.insert([{
 name:nome,
-email:email,
-cpf:cpf,
-whatsapp:whatsapp,
-plano:plano,
-status:status,
-tipo:tipo,
-tipo_sistema:"financeiro"
-}
-]);
+email,
+cpf,
+whatsapp,
+plano,
+status,
+tipo,
+tipo_sistema:"financeiro",
+valor_mensal: valorConvertido
+}]);
 
 }
 
@@ -120,6 +116,7 @@ setNome("");
 setEmail("");
 setCpf("");
 setWhatsapp("");
+setValorMensal("");
 
 carregarClientes();
 
@@ -130,11 +127,11 @@ carregarClientes();
 function editarCliente(c){
 
 setEditandoId(c.id);
-
 setNome(c.name || "");
 setEmail(c.email || "");
 setCpf(c.cpf || "");
 setWhatsapp(c.whatsapp || "");
+setValorMensal(c.valor_mensal || "");
 
 window.scrollTo({ top:0, behavior:"smooth" });
 
@@ -144,13 +141,9 @@ window.scrollTo({ top:0, behavior:"smooth" });
 
 async function excluirCliente(id){
 
-const confirmar = confirm("Deseja excluir esse cliente?");
-if(!confirmar) return;
+if(!confirm("Excluir cliente?")) return;
 
-await supabase
-.from("empresas")
-.delete()
-.eq("id",id);
+await supabase.from("empresas").delete().eq("id",id);
 
 carregarClientes();
 
@@ -160,11 +153,11 @@ carregarClientes();
 
 async function alterarStatus(cliente){
 
-const novoStatus = cliente.status==="Ativo"?"Bloqueado":"Ativo";
+const novo = cliente.status==="Ativo"?"Bloqueado":"Ativo";
 
 await supabase
 .from("empresas")
-.update({status:novoStatus})
+.update({status:novo})
 .eq("id",cliente.id);
 
 carregarClientes();
@@ -184,21 +177,16 @@ carregarClientes();
 
 }
 
-// ================= ESTILO MELHORADO
+// ================= ESTILO
 
 const td = {
 padding:"10px",
 borderBottom:"1px solid #1f2937",
-textAlign:"left",
-whiteSpace:"nowrap",
-overflow:"hidden",
-textOverflow:"ellipsis",
-maxWidth:"120px",
 fontSize:"13px"
 };
 
 const btn = (bg) => ({
-padding:"6px 8px",
+padding:"6px 10px",
 fontSize:12,
 borderRadius:6,
 border:"none",
@@ -211,45 +199,9 @@ return(
 
 <div style={{padding:30,color:"#fff"}}>
 
-<h1>👑 Painel de Clientes do Sistema</h1>
+<h1>👑 Painel de Clientes</h1>
 
-{pixCode && (
-
-<div style={{
-background:"#111827",
-padding:20,
-borderRadius:10,
-marginBottom:30
-}}>
-
-<h3>💰 PIX Mensalidade</h3>
-
-{pixQr && <img src={pixQr} width={200}/>}
-
-<textarea
-value={pixCode}
-readOnly
-style={{width:"100%",height:80,marginTop:10}}
-/>
-
-<button
-onClick={()=>navigator.clipboard.writeText(pixCode)}
-style={{
-marginTop:10,
-padding:10,
-background:"#22c55e",
-border:"none",
-borderRadius:6,
-color:"#fff"
-}}
->
-Copiar PIX
-</button>
-
-</div>
-
-)}
-
+{/* FORM */}
 <div style={{
 background:"#111827",
 padding:20,
@@ -260,44 +212,45 @@ gap:10,
 flexWrap:"wrap"
 }}>
 
-<input style={{padding:8,borderRadius:6}} placeholder="Nome" value={nome} onChange={e=>setNome(e.target.value)} />
-<input style={{padding:8,borderRadius:6}} placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-<input style={{padding:8,borderRadius:6}} placeholder="CPF" value={cpf} onChange={e=>setCpf(e.target.value)} />
-<input style={{padding:8,borderRadius:6}} placeholder="WhatsApp" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} />
+<input placeholder="Nome" value={nome} onChange={e=>setNome(e.target.value)} />
+<input placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
+<input placeholder="CPF" value={cpf} onChange={e=>setCpf(e.target.value)} />
+<input placeholder="WhatsApp" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} />
+
+<input 
+placeholder="Valor Mensal (R$)" 
+value={valorMensal} 
+onChange={e=>setValorMensal(e.target.value)} 
+/>
 
 <button style={btn("#2563eb")} onClick={cadastrarCliente}>
-{editandoId ? "Salvar Alteração" : "Cadastrar Cliente"}
+{editandoId ? "Salvar" : "Cadastrar"}
 </button>
 
 </div>
 
-<div style={{width:"100%",overflowX:"auto"}}>
+{/* TABELA */}
 
-<table style={{
-width:"100%",
-minWidth:"1100px",
-background:"#111827",
-borderCollapse:"collapse"
-}}>
+<table style={{width:"100%",background:"#111827"}}>
 
 <thead>
-<tr style={{borderBottom:"2px solid #374151"}}>
-<th style={{...td,minWidth:"100px"}}>Tipo</th>
-<th style={{...td,minWidth:"140px"}}>Nome</th>
-<th style={{...td,minWidth:"180px"}}>Email</th>
-<th style={{...td,minWidth:"120px"}}>CPF</th>
-<th style={{...td,minWidth:"140px"}}>WhatsApp</th>
-<th style={{...td,minWidth:"100px"}}>Plano</th>
-<th style={{...td,minWidth:"100px"}}>Status</th>
-<th style={{...td,minWidth:"80px"}}>Isento</th>
-<th style={{...td,minWidth:"140px"}}>Ações</th>
+<tr>
+<th style={td}>Tipo</th>
+<th style={td}>Nome</th>
+<th style={td}>Email</th>
+<th style={td}>CPF</th>
+<th style={td}>WhatsApp</th>
+<th style={td}>Plano</th>
+<th style={td}>Valor</th> {/* NOVO */}
+<th style={td}>Status</th>
+<th style={td}>Isento</th>
+<th style={td}>Ações</th>
 </tr>
 </thead>
 
 <tbody>
 
 {clientes.map(c=>(
-
 <tr key={c.id}>
 
 <td style={td}>{c.tipo}</td>
@@ -306,16 +259,13 @@ borderCollapse:"collapse"
 <td style={td}>{c.cpf}</td>
 <td style={td}>{c.whatsapp}</td>
 <td style={td}>{c.plano}</td>
+<td style={td}>R$ {Number(c.valor_mensal || 49).toFixed(2)}</td>
 <td style={td}>{c.status}</td>
 <td style={td}>{c.isento ? "Sim":"Não"}</td>
 
 <td style={td}>
 
-<div style={{
-display:"flex",
-flexDirection:"column",
-gap:6
-}}>
+<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
 
 <button style={btn("#2563eb")} onClick={()=>editarCliente(c)}>Editar</button>
 <button style={btn("#22c55e")} onClick={()=>gerarPix(c)}>PIX</button>
@@ -325,7 +275,7 @@ gap:6
 </button>
 
 <button style={btn("#9333ea")} onClick={()=>alternarIsencao(c)}>
-{c.isento?"Remover Isenção":"Isentar"}
+{c.isento?"Remover":"Isentar"}
 </button>
 
 <button style={btn("#ef4444")} onClick={()=>excluirCliente(c.id)}>
@@ -337,7 +287,6 @@ Excluir
 </td>
 
 </tr>
-
 ))}
 
 </tbody>
@@ -346,8 +295,5 @@ Excluir
 
 </div>
 
-</div>
-
 );
-
 }

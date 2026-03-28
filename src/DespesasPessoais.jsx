@@ -9,17 +9,13 @@ export default function DespesasPessoais() {
   const [valor, setValor] = useState("");
   const [empresaId, setEmpresaId] = useState(null);
   const [dataLancamento, setDataLancamento] = useState(new Date().toISOString().split("T")[0]);
+  const [salvando, setSalvando] = useState(false); // 🔥 NOVO
 
   useEffect(() => {
     init();
   }, []);
 
   async function init() {
-
-    // 🔥 FORÇA LIMPAR SESSÃO ANTIGA (IMPORTANTE PRA TESTE)
-    // (depois pode remover isso)
-    // await supabase.auth.signOut();
-
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
@@ -27,47 +23,30 @@ export default function DespesasPessoais() {
       return;
     }
 
-    console.log("USER LOGADO INIT:", user.id); // 🔥 DEBUG
+    console.log("USER LOGADO INIT:", user.id);
 
-    let { data: perfil, error: errPerfil } = await supabase
+    let { data: perfil } = await supabase
       .from("usuarios")
       .select("*")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (errPerfil) {
-      console.error("Erro ao buscar perfil:", errPerfil);
-      return;
-    }
-
     if (!perfil) {
-      const { data: novoPerfil, error: errP } = await supabase
+      const { data: novoPerfil } = await supabase
         .from("usuarios")
         .insert([{ id: user.id, email: user.email, nome: user.email }])
         .select()
         .single();
 
-      if (errP) {
-        console.error("Erro ao criar perfil:", errP);
-        alert("Erro ao criar perfil");
-        return;
-      }
-
       perfil = novoPerfil;
     }
 
     if (!perfil?.empresa_id) {
-      const { data: novaEmpresa, error: errE } = await supabase
+      const { data: novaEmpresa } = await supabase
         .from("empresas")
         .insert([{ name: "Pessoal", user_id: user.id }])
         .select()
         .single();
-
-      if (errE) {
-        console.error("Erro ao criar empresa:", errE);
-        alert("Erro ao criar empresa");
-        return;
-      }
 
       await supabase
         .from("usuarios")
@@ -85,7 +64,7 @@ export default function DespesasPessoais() {
   async function carregar(userId) {
     if (!userId) return;
 
-    console.log("CARREGANDO USER:", userId); // 🔥 DEBUG
+    console.log("CARREGANDO USER:", userId);
 
     const { data, error } = await supabase
       .from("despesas")
@@ -94,8 +73,7 @@ export default function DespesasPessoais() {
       .order("data_lancamento", { ascending: false });
 
     if (error) {
-      console.error("Erro ao carregar:", error);
-      alert("Erro ao carregar: " + error.message);
+      console.error(error);
       return;
     }
 
@@ -103,14 +81,14 @@ export default function DespesasPessoais() {
   }
 
   async function salvar() {
-    const { data: { user }, error: errUser } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (errUser || !user) {
+    if (!user) {
       alert("Sessão expirada");
       return;
     }
 
-    console.log("USER LOGADO SALVAR:", user.id); // 🔥 DEBUG
+    console.log("USER LOGADO SALVAR:", user.id);
 
     if (!descricao || !valor) {
       alert("Preencha descrição e valor");
@@ -129,6 +107,8 @@ export default function DespesasPessoais() {
       return;
     }
 
+    setSalvando(true); // 🔥 trava botão
+
     const { error } = await supabase
       .from("despesas")
       .insert([{
@@ -140,6 +120,8 @@ export default function DespesasPessoais() {
         empresa_id: empresaId,
         user_id: user.id
       }]);
+
+    setSalvando(false);
 
     if (error) {
       console.error("Erro ao salvar:", error);
@@ -154,9 +136,8 @@ export default function DespesasPessoais() {
   }
 
   async function excluir(id) {
-    const { data: { user }, error: errUser } = await supabase.auth.getUser();
-
-    if (errUser || !user) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
     const { error } = await supabase
       .from("despesas")
@@ -165,8 +146,7 @@ export default function DespesasPessoais() {
       .eq("user_id", user.id);
 
     if (error) {
-      console.error("Erro ao excluir:", error);
-      alert("Erro ao excluir: " + error.message);
+      alert("Erro ao excluir");
       return;
     }
 
@@ -174,10 +154,10 @@ export default function DespesasPessoais() {
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 800, margin: "0 auto", fontFamily: 'sans-serif' }}>
+    <div style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
       <h1>💳 Cunha Finance</h1>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <input type="date" value={dataLancamento} onChange={e => setDataLancamento(e.target.value)} />
         
         <select value={tipo} onChange={e => setTipo(e.target.value)}>
@@ -199,29 +179,32 @@ export default function DespesasPessoais() {
         <input placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} />
         <input type="number" placeholder="Valor" value={valor} onChange={e => setValor(e.target.value)} />
         
-        <button onClick={salvar} style={{ padding: '10px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-          Salvar Lançamento
+        <button 
+          onClick={salvar} 
+          className="botao-form"
+          disabled={salvando}
+        >
+          {salvando ? "Salvando..." : "Salvar Lançamento"}
         </button>
       </div>
 
       <hr />
+
       <h2>Meus Lançamentos</h2>
 
       {lancamentos.length === 0 && <p>Nenhum registro encontrado.</p>}
 
       {lancamentos.map(l => (
-        <div key={l.id} style={{ border: "1px solid #e2e8f0", padding: 12, marginBottom: 10, borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{l.categoria}</span>
-            <br />
-            <strong>{l.descricao}</strong>
-            <br />
-            <small>📅 {l.data_lancamento} | {l.tipo === 'despesa' ? '🔴' : '🟢'}</small>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontWeight: 'bold' }}>R$ {Number(l.valor).toFixed(2)}</div>
-            <button onClick={() => excluir(l.id)} style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>Excluir</button>
-          </div>
+        <div key={l.id} style={{ border: "1px solid #334155", padding: 12, marginBottom: 10, borderRadius: 6 }}>
+          <strong>{l.categoria}</strong>
+          <br />
+          {l.descricao}
+          <br />
+          📅 {l.data_lancamento}
+          <br />
+          💰 R$ {Number(l.valor).toFixed(2)}
+          <br />
+          <button onClick={() => excluir(l.id)}>Excluir</button>
         </div>
       ))}
     </div>
