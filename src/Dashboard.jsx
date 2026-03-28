@@ -50,6 +50,11 @@ let { data, error } = await supabase
 .eq("id",user.id)
 .single();
 
+if(error){
+console.log(error);
+return;
+}
+
 // 🔥 SE NÃO EXISTIR EMPRESA → CRIA AUTOMATICO
 if(!data || !data.empresa_id){
 
@@ -64,7 +69,6 @@ user_id: user.id
 .select()
 .single();
 
-// atualiza usuario com empresa
 await supabase
 .from("usuarios")
 .update({ empresa_id: novaEmpresa.id })
@@ -75,7 +79,8 @@ data = { empresa_id: novaEmpresa.id };
 
 setEmpresaId(data.empresa_id);
 
-await carregarDados(data.empresa_id);
+// 🔥 AGORA PASSA USER ID (IMPORTANTE)
+await carregarDados(user.id);
 
 }catch(e){
 console.log(e);
@@ -86,17 +91,22 @@ setCarregando(false);
 
 }
 
-async function carregarDados(empId){
+async function carregarDados(userId){
 
-const dataLimite = new Date();
-dataLimite.setMonth(dataLimite.getMonth()-3);
+if(!userId) return;
 
-const { data } = await supabase
+// 🔥 AGORA FILTRA PESSOAL
+const { data, error } = await supabase
 .from("lancamentos")
-.select("valor, tipo, mes, data_lancamento")
-.eq("empresa_id", empId)
-.gte("data_lancamento", dataLimite.toISOString())
-.limit(200);
+.select("*")
+.eq("user_id", userId)
+.is("empresa_id", null) // 🔥 garante que é pessoal
+.limit(500);
+
+if(error){
+console.log("Erro ao carregar lancamentos:", error);
+return;
+}
 
 calcularDados(data || []);
 
@@ -129,6 +139,10 @@ const meses = {};
 lista.forEach(l=>{
 
 let mes = Number(l.mes);
+
+if(!mes && l.data){
+mes = new Date(l.data).getMonth()+1;
+}
 
 if(!mes && l.data_lancamento){
 mes = new Date(l.data_lancamento).getMonth()+1;
@@ -169,7 +183,7 @@ return(
 
 <div style={{padding:20,color:"#fff"}}>
 
-<h2 style={{marginBottom:20}}>📊 Dashboard</h2>
+<h2 style={{marginBottom:20}}>📊 Dashboard (Pessoal)</h2>
 
 <div style={{
 display:"grid",

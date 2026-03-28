@@ -146,22 +146,29 @@ return;
 
 
 // ================= REGISTRAR NO FINANCEIRO
-await supabase
+const { error: erroFinanceiro } = await supabase
 .from("lancamentos")
 .insert([
 {
 empresa_id:empresaId,
-tipo: "despesa",
-descricao: "Compra material",
+tipo: "DESPESA", // 🔥 IMPORTANTE (antes estava "despesa")
+descricao: `Compra de ${produto?.nome || "material"}`,
 valor: valorTotal,
 produto: produto?.nome,
 kilos: Number(kilos),
 mes: new Date(dataCompra).getMonth() + 1,
-ano: new Date(dataCompra).getFullYear()
+ano: new Date(dataCompra).getFullYear(),
+data: dataCompra,
+user_id: user.id
 }
 ]);
 
+if (erroFinanceiro) {
+console.log("Erro ao lançar no financeiro:", erroFinanceiro);
+}
 
+
+// limpar campos
 setFornecedor("");
 setProdutoId("");
 setKilos("");

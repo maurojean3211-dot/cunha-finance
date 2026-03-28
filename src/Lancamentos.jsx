@@ -70,21 +70,26 @@ await supabase
 data = { empresa_id:novaEmpresa.id };
 }
 
-if(data){
+if(data?.empresa_id){
 setEmpresaId(data.empresa_id);
-carregarLancamentos(data.empresa_id);
+
+// 🔥 AGORA CARREGA PESSOAL (NÃO EMPRESA)
+carregarLancamentos(user.id);
 }
 
 }
 
 // ================= CARREGAR LANCAMENTOS
 
-async function carregarLancamentos(empId){
+async function carregarLancamentos(userId){
+
+if(!userId) return;
 
 const { data,error } = await supabase
 .from("lancamentos")
 .select("*")
-.eq("empresa_id",empId)
+.eq("user_id",userId)
+.is("empresa_id", null) // 🔥 GARANTE QUE É PESSOAL
 .order("id",{ascending:false});
 
 if(error){
@@ -106,22 +111,14 @@ alert("Usuário não logado");
 return;
 }
 
-// 🔥 BUSCA EMPRESA NA HORA
-const { data: usuario } = await supabase
-.from("usuarios")
-.select("empresa_id")
-.eq("id", user.id)
-.single();
-
-if(!usuario?.empresa_id){
-alert("Empresa não encontrada");
+if(!descricao || !valor){
+alert("Preencha descrição e valor");
 return;
 }
 
-const empId = usuario.empresa_id;
-
-if(!descricao || !valor){
-alert("Preencha descrição e valor");
+const valorNumero = Number(valor);
+if(isNaN(valorNumero)){
+alert("Valor inválido");
 return;
 }
 
@@ -135,13 +132,13 @@ const { error } = await supabase
 .from("lancamentos")
 .update({
 descricao,
-valor:Number(valor),
+valor:valorNumero,
 mes,
 ano,
 data_lancamento:dataLancamento
 })
 .eq("id",editandoId)
-.eq("empresa_id",empId);
+.eq("user_id",user.id); // 🔥 SEGURANÇA
 
 if(error){
 console.log(error);
@@ -158,11 +155,11 @@ const { error } = await supabase
 .insert([
 {
 descricao,
-valor:Number(valor),
+valor:valorNumero,
 mes,
 ano,
-empresa_id: empId,
-user_id:user.id,
+empresa_id: null, // 🔥 PESSOAL
+user_id:user.id, // 🔥 OBRIGATÓRIO
 data_lancamento:dataLancamento,
 tipo:"receita"
 }
@@ -180,7 +177,7 @@ setDescricao("");
 setValor("");
 setDataLancamento(new Date().toISOString().split("T")[0]);
 
-carregarLancamentos(empId);
+carregarLancamentos(user.id);
 
 }
 
@@ -198,40 +195,32 @@ setEditandoId(l.id);
 
 }
 
-// ================= EXCLUIR (🔥 CORRIGIDO)
+// ================= EXCLUIR
 
 async function excluirLancamento(id){
 
 if(!window.confirm("Excluir lançamento?")) return;
 
-// 🔥 BUSCA EMPRESA NA HORA
 const { data:{user} } = await supabase.auth.getUser();
+if(!user) return;
 
-const { data: usuario } = await supabase
-.from("usuarios")
-.select("empresa_id")
-.eq("id", user.id)
-.single();
-
-const empId = usuario?.empresa_id;
-
-const { error } = await supabase
+const { error: erroDelete } = await supabase
 .from("lancamentos")
 .delete()
 .eq("id",id)
-.eq("empresa_id",empId);
+.eq("user_id",user.id); // 🔥 AGORA FUNCIONA
 
-if(error){
-console.log(error);
+if(erroDelete){
+console.log(erroDelete);
 alert("Erro ao excluir");
 return;
 }
 
-carregarLancamentos(empId);
+carregarLancamentos(user.id);
 
 }
 
-// ================= GERAR PIX
+// ================= GERAR PIX (igual)
 
 async function gerarPix(l){
 
@@ -254,8 +243,6 @@ descricao:l.descricao
 
 const data = await response.json();
 
-console.log("PIX:",data);
-
 if(data.invoiceUrl){
 window.open(data.invoiceUrl);
 }else{
@@ -277,7 +264,7 @@ return(
 
 <div style={{padding:20}}>
 
-<h1>💰 Lançamentos Financeiros</h1>
+<h1>💰 Lançamentos Financeiros (Pessoal)</h1>
 
 <div style={{
 background:"#f4f4f4",
@@ -313,20 +300,8 @@ onChange={(e)=>setValor(e.target.value)}
 
 <br/><br/>
 
-<button
-onClick={salvarLancamento}
-style={{
-background:"#22c55e",
-color:"#fff",
-border:"none",
-padding:"8px 15px",
-borderRadius:6,
-cursor:"pointer"
-}}
->
-
+<button onClick={salvarLancamento}>
 {editandoId ? "Atualizar" : "Salvar"}
-
 </button>
 
 </div>
@@ -335,15 +310,12 @@ cursor:"pointer"
 
 {lancamentos.map(l=>(
 
-<div
-key={l.id}
-style={{
+<div key={l.id} style={{
 border:"1px solid #ccc",
 padding:12,
 marginBottom:10,
 borderRadius:6
-}}
->
+}}>
 
 <strong>{l.descricao}</strong>
 
@@ -362,52 +334,9 @@ R$ {Number(l.valor).toFixed(2)}
 
 <br/>
 
-<button
-onClick={()=>editarLancamento(l)}
-style={{
-background:"#3b82f6",
-color:"#fff",
-border:"none",
-padding:"6px 12px",
-marginTop:8,
-marginRight:5,
-borderRadius:6,
-cursor:"pointer"
-}}
->
-Editar
-</button>
-
-<button
-onClick={()=>gerarPix(l)}
-style={{
-background:"#10b981",
-color:"#fff",
-border:"none",
-padding:"6px 12px",
-marginTop:8,
-marginRight:5,
-borderRadius:6,
-cursor:"pointer"
-}}
->
-Gerar PIX
-</button>
-
-<button
-onClick={()=>excluirLancamento(l.id)}
-style={{
-background:"#ef4444",
-color:"#fff",
-border:"none",
-padding:"6px 12px",
-marginTop:8,
-borderRadius:6,
-cursor:"pointer"
-}}
->
-Excluir
-</button>
+<button onClick={()=>editarLancamento(l)}>Editar</button>
+<button onClick={()=>gerarPix(l)}>PIX</button>
+<button onClick={()=>excluirLancamento(l.id)}>Excluir</button>
 
 </div>
 

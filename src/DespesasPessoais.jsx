@@ -1,198 +1,229 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 
-export default function DespesasPessoais(){
+export default function DespesasPessoais() {
+  const [lancamentos, setLancamentos] = useState([]);
+  const [tipo, setTipo] = useState("despesa");
+  const [categoria, setCategoria] = useState("Supermercado");
+  const [descricao, setDescricao] = useState("");
+  const [valor, setValor] = useState("");
+  const [empresaId, setEmpresaId] = useState(null);
+  const [dataLancamento, setDataLancamento] = useState(new Date().toISOString().split("T")[0]);
 
-const [lancamentos,setLancamentos] = useState([]);
+  useEffect(() => {
+    init();
+  }, []);
 
-const [tipo,setTipo] = useState("despesa");
-const [categoria,setCategoria] = useState("Supermercado");
-const [descricao,setDescricao] = useState("");
-const [valor,setValor] = useState("");
+  async function init() {
 
-const [dataLancamento,setDataLancamento] = useState(
-new Date().toISOString().split("T")[0]
-);
+    // 🔥 FORÇA LIMPAR SESSÃO ANTIGA (IMPORTANTE PRA TESTE)
+    // (depois pode remover isso)
+    // await supabase.auth.signOut();
 
-// ================= CARREGAR
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-useEffect(()=>{
-carregar();
-},[]);
+    if (error || !user) {
+      alert("Usuário não logado");
+      return;
+    }
 
-async function carregar(){
+    console.log("USER LOGADO INIT:", user.id); // 🔥 DEBUG
 
-const { data: lista, error } = await supabase
-.from("despesas")
-.select("*")
-.order("data_lancamento",{ascending:false});
+    let { data: perfil, error: errPerfil } = await supabase
+      .from("usuarios")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
 
-if(error){
-console.log("Erro carregar:", error);
-alert("Erro ao carregar dados");
-return;
-}
+    if (errPerfil) {
+      console.error("Erro ao buscar perfil:", errPerfil);
+      return;
+    }
 
-setLancamentos(lista || []);
-}
+    if (!perfil) {
+      const { data: novoPerfil, error: errP } = await supabase
+        .from("usuarios")
+        .insert([{ id: user.id, email: user.email, nome: user.email }])
+        .select()
+        .single();
 
-// ================= SALVAR (VERSÃO FINAL ESTÁVEL)
+      if (errP) {
+        console.error("Erro ao criar perfil:", errP);
+        alert("Erro ao criar perfil");
+        return;
+      }
 
-async function salvar(){
+      perfil = novoPerfil;
+    }
 
-if(!descricao || !valor){
-alert("Preencha descrição e valor");
-return;
-}
+    if (!perfil?.empresa_id) {
+      const { data: novaEmpresa, error: errE } = await supabase
+        .from("empresas")
+        .insert([{ name: "Pessoal", user_id: user.id }])
+        .select()
+        .single();
 
-// 🔥 GARANTE VALOR NUMÉRICO
-const valorNumero = Number(valor);
+      if (errE) {
+        console.error("Erro ao criar empresa:", errE);
+        alert("Erro ao criar empresa");
+        return;
+      }
 
-if(isNaN(valorNumero)){
-alert("Valor inválido");
-return;
-}
+      await supabase
+        .from("usuarios")
+        .update({ empresa_id: novaEmpresa.id })
+        .eq("id", user.id);
 
-// 🔥 GARANTE DATA VÁLIDA
-let dataFormatada;
+      setEmpresaId(novaEmpresa.id);
+    } else {
+      setEmpresaId(perfil.empresa_id);
+    }
 
-try{
-dataFormatada = new Date(dataLancamento)
-.toISOString()
-.split("T")[0];
-}catch{
-alert("Data inválida");
-return;
-}
+    carregar(user.id);
+  }
 
-// 🔥 INSERT LIMPO (SEM EMPRESA_ID / SEM UUID)
-const { error } = await supabase
-.from("despesas")
-.insert([{
-tipo: tipo || "despesa",
-categoria: categoria || "Outros",
-descricao: descricao.trim(),
-valor: valorNumero,
-data_lancamento: dataFormatada
-}]);
+  async function carregar(userId) {
+    if (!userId) return;
 
-if(error){
-console.log("ERRO REAL:", error);
-alert("Erro real: " + error.message);
-return;
-}
+    console.log("CARREGANDO USER:", userId); // 🔥 DEBUG
 
-alert("Salvo com sucesso!");
+    const { data, error } = await supabase
+      .from("despesas")
+      .select("*")
+      .eq("user_id", userId)
+      .order("data_lancamento", { ascending: false });
 
-setDescricao("");
-setValor("");
+    if (error) {
+      console.error("Erro ao carregar:", error);
+      alert("Erro ao carregar: " + error.message);
+      return;
+    }
 
-await carregar();
-}
+    setLancamentos(data || []);
+  }
 
-// ================= EXCLUIR
+  async function salvar() {
+    const { data: { user }, error: errUser } = await supabase.auth.getUser();
 
-async function excluir(id){
+    if (errUser || !user) {
+      alert("Sessão expirada");
+      return;
+    }
 
-const { error } = await supabase
-.from("despesas")
-.delete()
-.eq("id",id);
+    console.log("USER LOGADO SALVAR:", user.id); // 🔥 DEBUG
 
-if(error){
-console.log("Erro excluir:", error);
-alert("Erro ao excluir");
-return;
-}
+    if (!descricao || !valor) {
+      alert("Preencha descrição e valor");
+      return;
+    }
 
-await carregar();
-}
+    if (!empresaId) {
+      alert("Empresa não carregada");
+      return;
+    }
 
-// ================= UI
+    const valorNumero = parseFloat(valor);
 
-return(
+    if (isNaN(valorNumero)) {
+      alert("Valor inválido");
+      return;
+    }
 
-<div style={{padding:20,maxWidth:800,margin:"0 auto"}}>
+    const { error } = await supabase
+      .from("despesas")
+      .insert([{
+        tipo,
+        categoria,
+        descricao: descricao.trim(),
+        valor: valorNumero,
+        data_lancamento: dataLancamento,
+        empresa_id: empresaId,
+        user_id: user.id
+      }]);
 
-<h1>💳 Finanças Pessoais</h1>
+    if (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar: " + error.message);
+      return;
+    }
 
-<h2>Novo Lançamento</h2>
+    setDescricao("");
+    setValor("");
 
-<input
-type="date"
-value={dataLancamento}
-onChange={e=>setDataLancamento(e.target.value)}
-/>
+    await carregar(user.id);
+  }
 
-<br/><br/>
+  async function excluir(id) {
+    const { data: { user }, error: errUser } = await supabase.auth.getUser();
 
-<select value={tipo} onChange={e=>setTipo(e.target.value)}>
-<option value="despesa">Despesa</option>
-<option value="receita">Receita</option>
-</select>
+    if (errUser || !user) return;
 
-<br/><br/>
+    const { error } = await supabase
+      .from("despesas")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
 
-<select value={categoria} onChange={e=>setCategoria(e.target.value)}>
-<option>Supermercado</option>
-<option>Gasolina</option>
-<option>Aluguel</option>
-<option>Luz</option>
-<option>Água</option>
-<option>Internet</option>
-<option>Farmácia</option>
-<option>Outros</option>
-</select>
+    if (error) {
+      console.error("Erro ao excluir:", error);
+      alert("Erro ao excluir: " + error.message);
+      return;
+    }
 
-<br/><br/>
+    await carregar(user.id);
+  }
 
-<input
-placeholder="Descrição"
-value={descricao}
-onChange={e=>setDescricao(e.target.value)}
-/>
+  return (
+    <div style={{ padding: 20, maxWidth: 800, margin: "0 auto", fontFamily: 'sans-serif' }}>
+      <h1>💳 Cunha Finance</h1>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+        <input type="date" value={dataLancamento} onChange={e => setDataLancamento(e.target.value)} />
+        
+        <select value={tipo} onChange={e => setTipo(e.target.value)}>
+          <option value="despesa">Despesa</option>
+          <option value="receita">Receita</option>
+        </select>
 
-<br/><br/>
+        <select value={categoria} onChange={e => setCategoria(e.target.value)}>
+          <option>Supermercado</option>
+          <option>Gasolina</option>
+          <option>Aluguel</option>
+          <option>Luz</option>
+          <option>Água</option>
+          <option>Internet</option>
+          <option>Farmácia</option>
+          <option>Outros</option>
+        </select>
 
-<input
-type="number"
-placeholder="Valor"
-value={valor}
-onChange={e=>setValor(e.target.value)}
-/>
+        <input placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} />
+        <input type="number" placeholder="Valor" value={valor} onChange={e => setValor(e.target.value)} />
+        
+        <button onClick={salvar} style={{ padding: '10px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          Salvar Lançamento
+        </button>
+      </div>
 
-<br/><br/>
+      <hr />
+      <h2>Meus Lançamentos</h2>
 
-<button onClick={salvar}>Salvar</button>
+      {lancamentos.length === 0 && <p>Nenhum registro encontrado.</p>}
 
-<hr/>
-
-<h2>Lançamentos</h2>
-
-{lancamentos.map(l=>(
-<div key={l.id} style={{
-border:"1px solid #334155",
-padding:12,
-marginBottom:10,
-borderRadius:6
-}}>
-<strong>{l.categoria}</strong>
-<br/>
-{l.descricao}
-<br/>
-📅 {l.data_lancamento}
-<br/>
-💰 R$ {Number(l.valor).toFixed(2)}
-
-<br/>
-
-<button onClick={()=>excluir(l.id)}>Excluir</button>
-
-</div>
-))}
-
-</div>
-
-);
-
+      {lancamentos.map(l => (
+        <div key={l.id} style={{ border: "1px solid #e2e8f0", padding: 12, marginBottom: 10, borderRadius: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>{l.categoria}</span>
+            <br />
+            <strong>{l.descricao}</strong>
+            <br />
+            <small>📅 {l.data_lancamento} | {l.tipo === 'despesa' ? '🔴' : '🟢'}</small>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: 'bold' }}>R$ {Number(l.valor).toFixed(2)}</div>
+            <button onClick={() => excluir(l.id)} style={{ color: 'red', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}>Excluir</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
