@@ -9,7 +9,7 @@ export default function DespesasPessoais() {
   const [valor, setValor] = useState("");
   const [empresaId, setEmpresaId] = useState(null);
   const [dataLancamento, setDataLancamento] = useState(new Date().toISOString().split("T")[0]);
-  const [salvando, setSalvando] = useState(false); // 🔥 NOVO
+  const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
     init();
@@ -22,8 +22,6 @@ export default function DespesasPessoais() {
       alert("Usuário não logado");
       return;
     }
-
-    console.log("USER LOGADO INIT:", user.id);
 
     let { data: perfil } = await supabase
       .from("usuarios")
@@ -64,8 +62,6 @@ export default function DespesasPessoais() {
   async function carregar(userId) {
     if (!userId) return;
 
-    console.log("CARREGANDO USER:", userId);
-
     const { data, error } = await supabase
       .from("despesas")
       .select("*")
@@ -88,8 +84,6 @@ export default function DespesasPessoais() {
       return;
     }
 
-    console.log("USER LOGADO SALVAR:", user.id);
-
     if (!descricao || !valor) {
       alert("Preencha descrição e valor");
       return;
@@ -107,7 +101,7 @@ export default function DespesasPessoais() {
       return;
     }
 
-    setSalvando(true); // 🔥 trava botão
+    setSalvando(true);
 
     const { error } = await supabase
       .from("despesas")
@@ -124,8 +118,8 @@ export default function DespesasPessoais() {
     setSalvando(false);
 
     if (error) {
-      console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar: " + error.message);
+      console.error(error);
+      alert("Erro ao salvar");
       return;
     }
 
@@ -139,27 +133,29 @@ export default function DespesasPessoais() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabase
+    await supabase
       .from("despesas")
       .delete()
       .eq("id", id)
       .eq("user_id", user.id);
 
-    if (error) {
-      alert("Erro ao excluir");
-      return;
-    }
-
     await carregar(user.id);
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
-      <h1>💳 Cunha Finance</h1>
+    <div style={{
+      width: "100%",
+      maxWidth: "320px",   // 🔥 AQUI RESOLVE O PROBLEMA
+      margin: "0 auto",
+      padding: 20
+    }}>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <input type="date" value={dataLancamento} onChange={e => setDataLancamento(e.target.value)} />
+      <h2 style={{ marginBottom: 15 }}>💳 Cunha Finance</h2>
+
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         
+        <input type="date" value={dataLancamento} onChange={e => setDataLancamento(e.target.value)} />
+
         <select value={tipo} onChange={e => setTipo(e.target.value)}>
           <option value="despesa">Despesa</option>
           <option value="receita">Receita</option>
@@ -176,26 +172,55 @@ export default function DespesasPessoais() {
           <option>Outros</option>
         </select>
 
-        <input placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} />
-        <input type="number" placeholder="Valor" value={valor} onChange={e => setValor(e.target.value)} />
-        
-        <button 
-          onClick={salvar} 
-          className="botao-form"
+        <input
+          placeholder="Descrição"
+          value={descricao}
+          onChange={e => setDescricao(e.target.value)}
+        />
+
+        <input
+          type="number"
+          placeholder="Valor"
+          value={valor}
+          onChange={e => setValor(e.target.value)}
+        />
+
+        {/* 🔥 BOTÃO DEFINITIVO */}
+        <button
+          onClick={salvar}
           disabled={salvando}
+          style={{
+            width: "160px",
+            margin: "12px auto",
+            display: "block",
+            padding: "8px",
+            borderRadius: "8px",
+            background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+            border: "none",
+            color: "#fff",
+            fontSize: "13px",
+            cursor: "pointer"
+          }}
         >
-          {salvando ? "Salvando..." : "Salvar Lançamento"}
+          {salvando ? "Salvando..." : "💾 Salvar"}
         </button>
+
       </div>
 
       <hr />
 
-      <h2>Meus Lançamentos</h2>
+      <h3>Meus Lançamentos</h3>
 
       {lancamentos.length === 0 && <p>Nenhum registro encontrado.</p>}
 
       {lancamentos.map(l => (
-        <div key={l.id} style={{ border: "1px solid #334155", padding: 12, marginBottom: 10, borderRadius: 6 }}>
+        <div key={l.id} style={{
+          border: "1px solid #334155",
+          padding: 10,
+          marginBottom: 10,
+          borderRadius: 8,
+          background: "#020617"
+        }}>
           <strong>{l.categoria}</strong>
           <br />
           {l.descricao}
@@ -203,10 +228,27 @@ export default function DespesasPessoais() {
           📅 {l.data_lancamento}
           <br />
           💰 R$ {Number(l.valor).toFixed(2)}
+
           <br />
-          <button onClick={() => excluir(l.id)}>Excluir</button>
+
+          <button
+            style={{
+              marginTop: 8,
+              padding: "5px 10px",
+              fontSize: 12,
+              background: "#ef4444",
+              borderRadius: 6,
+              border: "none",
+              color: "#fff",
+              cursor: "pointer"
+            }}
+            onClick={() => excluir(l.id)}
+          >
+            Excluir
+          </button>
         </div>
       ))}
+
     </div>
   );
 }

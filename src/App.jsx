@@ -18,7 +18,7 @@ const [role,setRole] = useState(null);
 const [empresaId,setEmpresaId] = useState(null);
 const [isMobile,setIsMobile] = useState(window.innerWidth < 768);
 
-// RESPONSIVO
+// ================= RESPONSIVO
 useEffect(()=>{
 function handleResize(){
 setIsMobile(window.innerWidth < 768);
@@ -95,7 +95,7 @@ setSession(null);
 setEmpresaId(null);
 setRole(null);
 setPagina("dashboard");
-supabase.auth.signOut();
+await supabase.auth.signOut();
 }catch(err){
 console.log("Erro ao sair:", err);
 }
@@ -120,12 +120,10 @@ flexDirection: isMobile ? "column" : "row",
 width:"100%",
 minHeight:"100vh",
 background:"#020617",
-color:"#fff",
-fontFamily:"Arial, sans-serif"
+color:"#fff"
 }}>
 
 {/* MENU */}
-
 <div style={{
 width: isMobile ? "100%" : 220,
 background:"#020617",
@@ -135,56 +133,61 @@ padding:15,
 display:"flex",
 flexDirection: isMobile ? "row" : "column",
 flexWrap: isMobile ? "wrap" : "nowrap",
-gap:10,
-overflowX: isMobile ? "auto" : "visible"
+gap:8
 }}>
 
-<h2 style={{whiteSpace:"nowrap", width:"100%", marginBottom:10}}>
+<h2 style={{width:"100%", marginBottom:10}}>
 Cunha Finance
 </h2>
 
 <button onClick={()=>setPagina("dashboard")} style={pagina==="dashboard" ? botaoAtivo : botaoMenu}>
-📊 Dashboard </button>
+📊 Dashboard
+</button>
 
 <button onClick={()=>setPagina("financeiro")} style={pagina==="financeiro" ? botaoAtivo : botaoMenu}>
-💰 Financeiro </button>
+💰 Financeiro
+</button>
 
 {role === "ADMIN" && (
 <button onClick={()=>setPagina("lucro")} style={pagina==="lucro" ? botaoAtivo : botaoMenu}>
-📈 Lucro </button>
+📈 Lucro
+</button>
 )}
 
 <button onClick={()=>setPagina("despesas")} style={pagina==="despesas" ? botaoAtivo : botaoMenu}>
-💳 Pessoal </button>
+💳 Pessoal
+</button>
 
 <button onClick={()=>setPagina("admin")} style={pagina==="admin" ? botaoAtivo : botaoMenu}>
-⚙ Sistema </button>
+⚙ Sistema
+</button>
 
 {role === "ADMIN" && (
 <button onClick={()=>setPagina("master")} style={pagina==="master" ? botaoAtivo : botaoMenu}>
-👑 Master Admin </button>
+👑 Master
+</button>
 )}
 
 <button onClick={sair} style={{...botaoMenu, background:"#ef4444"}}>
-🚪 Sair </button>
+🚪 Sair
+</button>
 
 </div>
 
 {/* CONTEÚDO */}
-
 <div style={{
 flex:1,
 display:"flex",
 justifyContent:"center",
+alignItems:"flex-start",
 padding: isMobile ? 10 : 30
 }}>
 
 <div style={{
 width:"100%",
-maxWidth:"100%", // 🔥 CORREÇÃO AQUI (ANTES ERA 1200px)
+maxWidth:900,   // 🔥 controla largura geral
 margin:"0 auto",
-padding:20,
-borderRadius:12
+padding:20
 }}>
 
 {pagina==="dashboard" && <Dashboard />}
@@ -214,8 +217,7 @@ background:"#111827",
 color:"#cbd5f5",
 border:"none",
 borderRadius:8,
-cursor:"pointer",
-transition:"0.2s"
+cursor:"pointer"
 };
 
 const botaoAtivo={

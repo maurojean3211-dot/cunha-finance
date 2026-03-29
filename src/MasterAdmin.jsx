@@ -31,6 +31,11 @@ carregarClientes();
 
 async function gerarPix(cliente){
 
+if(cliente.isento === true){
+alert("Cliente isento");
+return;
+}
+
 let valor = Number(cliente.valor_mensal) || 49;
 
 const response = await fetch("/api/pix",{
@@ -118,7 +123,7 @@ setCpf("");
 setWhatsapp("");
 setValorMensal("");
 
-carregarClientes();
+await carregarClientes(); // 🔥 força atualização
 
 }
 
@@ -145,7 +150,7 @@ if(!confirm("Excluir cliente?")) return;
 
 await supabase.from("empresas").delete().eq("id",id);
 
-carregarClientes();
+await carregarClientes();
 
 }
 
@@ -160,20 +165,36 @@ await supabase
 .update({status:novo})
 .eq("id",cliente.id);
 
-carregarClientes();
+await carregarClientes();
 
 }
 
-// ================= ISENÇÃO
+// ================= ISENÇÃO (CORRIGIDO DE VERDADE)
 
 async function alternarIsencao(cliente){
 
-await supabase
+const novoValor = cliente.isento === true ? false : true;
+
+const { error } = await supabase
 .from("empresas")
-.update({isento:!cliente.isento})
+.update({ isento: novoValor })
 .eq("id",cliente.id);
 
-carregarClientes();
+if(error){
+console.log(error);
+alert("Erro ao alterar isenção");
+return;
+}
+
+// 🔥 ATUALIZA LOCAL NA HORA (SEM DEPENDER DO BANCO)
+setClientes(prev =>
+prev.map(c =>
+c.id === cliente.id ? { ...c, isento: novoValor } : c
+)
+);
+
+// 🔥 GARANTE SINCRONIZAÇÃO
+await carregarClientes();
 
 }
 
@@ -241,7 +262,7 @@ onChange={e=>setValorMensal(e.target.value)}
 <th style={td}>CPF</th>
 <th style={td}>WhatsApp</th>
 <th style={td}>Plano</th>
-<th style={td}>Valor</th> {/* NOVO */}
+<th style={td}>Valor</th>
 <th style={td}>Status</th>
 <th style={td}>Isento</th>
 <th style={td}>Ações</th>
@@ -259,9 +280,13 @@ onChange={e=>setValorMensal(e.target.value)}
 <td style={td}>{c.cpf}</td>
 <td style={td}>{c.whatsapp}</td>
 <td style={td}>{c.plano}</td>
-<td style={td}>R$ {Number(c.valor_mensal || 49).toFixed(2)}</td>
+
+<td style={td}>
+{c.isento === true ? "Isento" : `R$ ${Number(c.valor_mensal || 49).toFixed(2)}`}
+</td>
+
 <td style={td}>{c.status}</td>
-<td style={td}>{c.isento ? "Sim":"Não"}</td>
+<td style={td}>{c.isento === true ? "Sim":"Não"}</td>
 
 <td style={td}>
 
@@ -275,7 +300,7 @@ onChange={e=>setValorMensal(e.target.value)}
 </button>
 
 <button style={btn("#9333ea")} onClick={()=>alternarIsencao(c)}>
-{c.isento?"Remover":"Isentar"}
+{c.isento ? "Remover":"Isentar"}
 </button>
 
 <button style={btn("#ef4444")} onClick={()=>excluirCliente(c.id)}>

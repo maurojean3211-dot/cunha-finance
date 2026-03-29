@@ -48,21 +48,21 @@ display:flex;
 flex-direction:column;
 }
 
-/* ===== BOTÕES MENU ===== */
+/* ===== BOTÕES MENU */
 
 .menu-lateral button{
 width:100%;
 margin-bottom:10px;
 }
 
-/* ===== BOTÃO SAIR ===== */
+/* ===== BOTÃO SAIR */
 
 .botao-sair{
 margin-top:20px;
 background:#ef4444;
 }
 
-/* ===== CONTEÚDO ===== */
+/* ===== CONTEÚDO */
 
 .conteudo{
 flex:1;
@@ -71,14 +71,22 @@ min-height:100vh;
 overflow-y:auto;
 }
 
-/* ===== INPUT ===== */
+/* ===== FORM CONTAINER */
+
+.form-container{
+max-width:320px;
+margin:auto;
+display:flex;
+flex-direction:column;
+}
+
+/* ===== INPUT */
 
 input{
 display:block;
-width:420px;
-max-width:100%;
-padding:12px;
-margin-bottom:12px;
+width:100%;
+padding:10px;
+margin-bottom:10px;
 
 background:#111827;
 color:#fff;
@@ -86,17 +94,16 @@ color:#fff;
 border:1px solid #475569;
 border-radius:6px;
 
-font-size:16px;
+font-size:14px;
 }
 
-/* ===== SELECT ===== */
+/* ===== SELECT */
 
 select{
 display:block;
-width:420px;
-max-width:100%;
-padding:12px;
-margin-bottom:12px;
+width:100%;
+padding:10px;
+margin-bottom:10px;
 
 background:#111827;
 color:#fff;
@@ -104,51 +111,60 @@ color:#fff;
 border:1px solid #475569;
 border-radius:6px;
 
-font-size:16px;
+font-size:14px;
 cursor:pointer;
 }
 
-/* ===== OPTIONS ===== */
+/* ===== OPTIONS */
 
 select option{
 background:#ffffff;
 color:#000000;
 }
 
-/* ===== BOTÕES ===== */
+/* ===== BOTÕES (CORRIGIDO) */
 
 button{
-padding:10px 14px;
-border-radius:6px;
+padding:8px 12px;
+border-radius:8px;
 border:none;
 
-background:#3b82f6;
+background:linear-gradient(90deg, #00c6ff, #0072ff);
 color:#fff;
 
 cursor:pointer;
 font-weight:bold;
-width:auto; /* 🔥 evita botão gigante */
+
+width:auto !important;        /* 🔥 FORÇA NÃO ESTICAR */
+max-width:180px !important;   /* 🔥 LIMITE REAL */
+margin:10px auto;
+display:block;
+
+font-size:13px;
 }
 
 button:hover{
 opacity:0.9;
 }
 
-/* ===== BOTÃO FORM ===== */
+/* ===== BOTÃO FORM */
 
 .botao-form{
-width:200px;
-align-self:flex-start;
-margin-top:10px;
+width:160px !important;
+max-width:160px !important;
+margin:12px auto !important;
+display:block !important;
 }
 
-/* ===== TABELA ===== */
+/* ===== TABELA */
 
 table{
 width:100%;
 border-collapse:collapse;
 margin-top:20px;
-table-layout:auto; /* 🔥 importante pra colunas aparecerem */
+table-layout:auto;
+display:block;
+overflow-x:auto;
 }
 
 th, td{
@@ -156,28 +172,21 @@ padding:10px;
 text-align:left;
 border-bottom:1px solid #334155;
 font-size:13px;
-white-space:nowrap; /* 🔥 evita quebrar coluna */
+white-space:nowrap;
 }
 
 tr:hover{
 background:#020617;
 }
 
-/* ===== SCROLL HORIZONTAL TABELA ===== */
-
-table{
-display:block;
-overflow-x:auto;
-}
-
-/* ===== DIVISÃO ===== */
+/* ===== DIVISÃO */
 
 hr{
 border:1px solid #334155;
 margin:30px 0;
 }
 
-/* ===== SCROLL BONITO ===== */
+/* ===== SCROLL */
 
 ::-webkit-scrollbar{
 width:8px;
@@ -193,17 +202,23 @@ background:#334155;
 border-radius:4px;
 }
 
-/* ===== RESPONSIVO ===== */
+/* ===== RESPONSIVO (CORRIGIDO) */
 
 @media(max-width:768px){
 
-input,
-select{
-width:100%;
+.form-container{
+max-width:100%;
 }
 
+/* 🔥 NÃO deixa botão esticar no mobile */
 button{
-width:100%;
+width:auto !important;
+max-width:180px !important;
+}
+
+.botao-form{
+width:160px !important;
+max-width:160px !important;
 }
 
 }
