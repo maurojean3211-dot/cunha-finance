@@ -1,5 +1,5 @@
 /* =====================================================
-RESET LIMPO — CUNHA FINANCE
+RESET LIMPO — CUNHA FINANCE (VERSÃO FINAL)
 ===================================================== */
 
 * {
@@ -12,27 +12,19 @@ RESET LIMPO — CUNHA FINANCE
 }
 
 /* =====================================================
-BODY
+HTML / BODY
 ===================================================== */
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
+}
 
 body {
   font-family: Arial, Helvetica, sans-serif;
   background-color: #020617;
   color: #ffffff;
   min-height: 100vh;
-
-  width: 100%;
-  overflow-x: hidden;
-}
-
-/* =====================================================
-HTML
-===================================================== */
-
-html {
-  -webkit-text-size-adjust: 100%;
-  width: 100%;
-  overflow-x: hidden;
 }
 
 /* =====================================================
@@ -58,9 +50,9 @@ textarea {
   outline: none;
 
   font-size: 14px;
+
   width: 100%;
   max-width: 100%;
-  box-sizing: border-box;
 }
 
 input, select, textarea, button {
@@ -84,7 +76,7 @@ option {
 }
 
 /* =====================================================
-BOTÕES (SEM QUEBRAR SISTEMA)
+BOTÕES (SEGURO)
 ===================================================== */
 
 button {
@@ -99,7 +91,9 @@ button {
 
   font-size: 13px;
 
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 button:hover {
@@ -114,7 +108,7 @@ button.excluir {
   background: #dc2626;
 }
 
-/* 🔥 BOTÃO DO FORM */
+/* BOTÃO DE FORM CENTRAL */
 
 .botao-form {
   width: 160px !important;
@@ -154,7 +148,7 @@ SIDEBAR
 }
 
 /* =====================================================
-TABELA (🔥 IMPORTANTE PRO MASTER)
+TABELA (PROTEGIDA)
 ===================================================== */
 
 table {
@@ -171,12 +165,19 @@ th, td {
   white-space: nowrap;
 }
 
+/* evita quebra de layout no master */
+
+tbody tr:hover {
+  background: #020617;
+}
+
 /* =====================================================
 SCROLL
 ===================================================== */
 
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -189,18 +190,18 @@ SCROLL
 }
 
 /* =====================================================
-RESPONSIVO
+RESPONSIVO (SEGURO)
 ===================================================== */
 
 @media (max-width: 768px){
 
   input,
   select,
-  textarea{
+  textarea {
     width: 100%;
   }
 
-  table{
+  table {
     display: block;
     overflow-x: auto;
   }
