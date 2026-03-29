@@ -174,19 +174,15 @@ Cunha Finance
 
 </div>
 
-{/* CONTEÚDO */}
+{/* CONTEÚDO (🔥 CORRIGIDO DEFINITIVO) */}
 <div style={{
 flex:1,
-display:"flex",
-justifyContent:"center",
-alignItems:"flex-start",
 padding: isMobile ? 10 : 30
 }}>
 
 <div style={{
 width:"100%",
-maxWidth:900,   // 🔥 controla largura geral
-margin:"0 auto",
+maxWidth:"100%",
 padding:20
 }}>
 

@@ -3,78 +3,36 @@ import { supabase } from "./supabase";
 
 export default function MasterAdmin(){
 
-console.log("MASTER CERTO AGORA");
-
 const [clientes,setClientes]=useState([]);
 
-const [tipo,setTipo]=useState("Empresa");
 const [nome,setNome]=useState("");
 const [email,setEmail]=useState("");
 const [cpf,setCpf]=useState("");
 const [whatsapp,setWhatsapp]=useState("");
-
-const [plano,setPlano]=useState("Básico");
-const [status,setStatus]=useState("Ativo");
-
 const [valorMensal,setValorMensal]=useState("");
 
 const [editandoId,setEditandoId]=useState(null);
-
-const [pixQr,setPixQr]=useState("");
-const [pixCode,setPixCode]=useState("");
 
 useEffect(()=>{
 carregarClientes();
 },[]);
 
-// ================= PIX
-
-async function gerarPix(cliente){
-
-if(cliente.isento === true){
-alert("Cliente isento");
-return;
-}
-
-let valor = Number(cliente.valor_mensal) || 49;
-
-const response = await fetch("/api/pix",{
-method:"POST",
-headers:{ "Content-Type":"application/json" },
-body:JSON.stringify({
-nome:cliente.name,
-email:cliente.email,
-valor:valor,
-descricao:"Mensalidade Cunha Finance"
-})
-});
-
-const data = await response.json();
-
-if(data){
-setPixQr(data.encodedImage || data.qrCode || "");
-setPixCode(data.payload || data.copyPaste || "");
-}else{
-alert("Erro ao gerar PIX");
-}
-
-}
-
 // ================= CARREGAR
-
 async function carregarClientes(){
-
-const { data } = await supabase
+const { data, error } = await supabase
 .from("empresas")
 .select("*")
 .order("created_at",{ascending:false});
 
-setClientes(data || []);
-
+if(error){
+console.log(error);
+return;
 }
 
-// ================= CADASTRAR
+setClientes(data || []);
+}
 
+// ================= SALVAR
 async function cadastrarCliente(){
 
 if(!nome){
@@ -93,7 +51,7 @@ name:nome,
 email,
 cpf,
 whatsapp,
-valor_mensal: valorConvertido
+valor_mensal:valorConvertido
 })
 .eq("id",editandoId);
 
@@ -108,11 +66,10 @@ name:nome,
 email,
 cpf,
 whatsapp,
-plano,
-status,
-tipo,
-tipo_sistema:"financeiro",
-valor_mensal: valorConvertido
+tipo:"Empresa",
+plano:"Básico",
+status:"Ativo",
+valor_mensal:valorConvertido
 }]);
 
 }
@@ -123,41 +80,30 @@ setCpf("");
 setWhatsapp("");
 setValorMensal("");
 
-await carregarClientes(); // 🔥 força atualização
-
+await carregarClientes();
 }
 
 // ================= EDITAR
-
 function editarCliente(c){
-
 setEditandoId(c.id);
 setNome(c.name || "");
 setEmail(c.email || "");
 setCpf(c.cpf || "");
 setWhatsapp(c.whatsapp || "");
 setValorMensal(c.valor_mensal || "");
-
 window.scrollTo({ top:0, behavior:"smooth" });
-
 }
 
 // ================= EXCLUIR
-
 async function excluirCliente(id){
-
 if(!confirm("Excluir cliente?")) return;
 
 await supabase.from("empresas").delete().eq("id",id);
-
 await carregarClientes();
-
 }
 
 // ================= STATUS
-
 async function alterarStatus(cliente){
-
 const novo = cliente.status==="Ativo"?"Bloqueado":"Ativo";
 
 await supabase
@@ -166,18 +112,16 @@ await supabase
 .eq("id",cliente.id);
 
 await carregarClientes();
-
 }
 
-// ================= ISENÇÃO (CORRIGIDO DE VERDADE)
-
+// ================= ISENÇÃO
 async function alternarIsencao(cliente){
 
-const novoValor = cliente.isento === true ? false : true;
+const novo = !cliente.isento;
 
 const { error } = await supabase
 .from("empresas")
-.update({ isento: novoValor })
+.update({ isento: novo })
 .eq("id",cliente.id);
 
 if(error){
@@ -186,24 +130,16 @@ alert("Erro ao alterar isenção");
 return;
 }
 
-// 🔥 ATUALIZA LOCAL NA HORA (SEM DEPENDER DO BANCO)
-setClientes(prev =>
-prev.map(c =>
-c.id === cliente.id ? { ...c, isento: novoValor } : c
-)
-);
-
-// 🔥 GARANTE SINCRONIZAÇÃO
 await carregarClientes();
-
 }
 
 // ================= ESTILO
 
-const td = {
-padding:"10px",
+const thtd = {
+padding:"12px",
 borderBottom:"1px solid #1f2937",
-fontSize:"13px"
+fontSize:"13px",
+whiteSpace:"nowrap"
 };
 
 const btn = (bg) => ({
@@ -216,21 +152,28 @@ background:bg,
 color:"#fff"
 });
 
+// ================= UI
+
 return(
 
-<div style={{padding:30,color:"#fff"}}>
+<div style={{
+width:"100%",
+padding:20,
+color:"#fff"
+}}>
 
-<h1>👑 Painel de Clientes</h1>
+<h1 style={{marginBottom:20}}>👑 Painel de Clientes</h1>
 
-{/* FORM */}
+{/* ===== FORM ===== */}
 <div style={{
 background:"#111827",
 padding:20,
-borderRadius:10,
-marginBottom:30,
-display:"flex",
-gap:10,
-flexWrap:"wrap"
+borderRadius:12,
+marginBottom:25,
+
+display:"grid",
+gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",
+gap:10
 }}>
 
 <input placeholder="Nome" value={nome} onChange={e=>setNome(e.target.value)} />
@@ -244,28 +187,48 @@ value={valorMensal}
 onChange={e=>setValorMensal(e.target.value)} 
 />
 
-<button style={btn("#2563eb")} onClick={cadastrarCliente}>
+<button
+onClick={cadastrarCliente}
+style={{
+background:"#06b6d4",
+padding:"10px",
+borderRadius:8,
+border:"none",
+color:"#fff",
+fontWeight:"bold",
+width:"100%"
+}}
+>
 {editandoId ? "Salvar" : "Cadastrar"}
 </button>
 
 </div>
 
-{/* TABELA */}
+{/* ===== TABELA ===== */}
+<div style={{
+width:"100%",
+overflowX:"auto"
+}}>
 
-<table style={{width:"100%",background:"#111827"}}>
+<table style={{
+width:"100%",
+minWidth:1100,
+background:"#111827",
+borderRadius:12
+}}>
 
-<thead>
+<thead style={{background:"#020617"}}>
 <tr>
-<th style={td}>Tipo</th>
-<th style={td}>Nome</th>
-<th style={td}>Email</th>
-<th style={td}>CPF</th>
-<th style={td}>WhatsApp</th>
-<th style={td}>Plano</th>
-<th style={td}>Valor</th>
-<th style={td}>Status</th>
-<th style={td}>Isento</th>
-<th style={td}>Ações</th>
+<th style={thtd}>Tipo</th>
+<th style={thtd}>Nome</th>
+<th style={thtd}>Email</th>
+<th style={thtd}>CPF</th>
+<th style={thtd}>WhatsApp</th>
+<th style={thtd}>Plano</th>
+<th style={thtd}>Valor</th>
+<th style={thtd}>Status</th>
+<th style={thtd}>Isento</th>
+<th style={thtd}>Ações</th>
 </tr>
 </thead>
 
@@ -274,26 +237,29 @@ onChange={e=>setValorMensal(e.target.value)}
 {clientes.map(c=>(
 <tr key={c.id}>
 
-<td style={td}>{c.tipo}</td>
-<td style={td}>{c.name}</td>
-<td style={td}>{c.email}</td>
-<td style={td}>{c.cpf}</td>
-<td style={td}>{c.whatsapp}</td>
-<td style={td}>{c.plano}</td>
+<td style={thtd}>Empresa</td>
+<td style={thtd}><strong>{c.name}</strong></td>
+<td style={thtd}>{c.email}</td>
+<td style={thtd}>{c.cpf}</td>
+<td style={thtd}>{c.whatsapp}</td>
+<td style={thtd}>{c.plano}</td>
 
-<td style={td}>
-{c.isento === true ? "Isento" : `R$ ${Number(c.valor_mensal || 49).toFixed(2)}`}
+<td style={thtd}>
+{c.isento ? "Isento" : `R$ ${Number(c.valor_mensal || 49).toFixed(2)}`}
 </td>
 
-<td style={td}>{c.status}</td>
-<td style={td}>{c.isento === true ? "Sim":"Não"}</td>
+<td style={thtd}>{c.status}</td>
+<td style={thtd}>{c.isento ? "Sim":"Não"}</td>
 
-<td style={td}>
+<td style={thtd}>
+<div style={{
+display:"flex",
+gap:6,
+flexWrap:"wrap"
+}}>
 
-<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-
-<button style={btn("#2563eb")} onClick={()=>editarCliente(c)}>Editar</button>
-<button style={btn("#22c55e")} onClick={()=>gerarPix(c)}>PIX</button>
+<button style={btn("#06b6d4")} onClick={()=>editarCliente(c)}>Editar</button>
+<button style={btn("#22c55e")}>PIX</button>
 
 <button style={btn("#f59e0b")} onClick={()=>alterarStatus(c)}>
 {c.status==="Ativo"?"Bloquear":"Ativar"}
@@ -308,7 +274,6 @@ Excluir
 </button>
 
 </div>
-
 </td>
 
 </tr>
@@ -320,5 +285,6 @@ Excluir
 
 </div>
 
+</div>
 );
 }
