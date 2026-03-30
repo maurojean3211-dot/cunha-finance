@@ -8,6 +8,7 @@ import MasterAdmin from "./MasterAdmin";
 import Financeiro from "./Financeiro.jsx";
 import Lucro from "./Lucro.jsx";
 import DespesasPessoais from "./DespesasPessoais.jsx";
+import Relatorio from "./Relatorio.jsx"; // 🔥 NOVO
 
 export default function App(){
 
@@ -48,7 +49,6 @@ let { data:usuario } = await supabase
 .eq("id",user.id)
 .maybeSingle();
 
-// 🔥 CORREÇÃO DEFINITIVA
 if(usuario?.empresa_id){
   setEmpresaId(usuario.empresa_id);
 }
@@ -80,7 +80,6 @@ let { data:usuario } = await supabase
 .eq("id",newSession.user.id)
 .maybeSingle();
 
-// 🔥 CORREÇÃO DEFINITIVA AQUI TAMBÉM
 if(usuario?.empresa_id){
   setEmpresaId(usuario.empresa_id);
 }
@@ -113,7 +112,7 @@ if(!session){
 return <Login />;
 }
 
-// 🔥 NÃO TRAVA E NÃO SOME MAIS
+// EMPRESA
 if(session && empresaId === null){
 return (
 <div style={{color:"#fff",padding:20}}>
@@ -168,6 +167,11 @@ overflowX: isMobile ? "auto" : "visible"
 💳 Pessoal
 </button>
 
+{/* 🔥 NOVO BOTÃO */}
+<button onClick={()=>setPagina("relatorio")} style={pagina==="relatorio" ? botaoAtivo : botaoMenu}>
+📄 Relatórios
+</button>
+
 <button onClick={()=>setPagina("admin")} style={pagina==="admin" ? botaoAtivo : botaoMenu}>
 ⚙ Sistema
 </button>
@@ -197,6 +201,7 @@ overflow:"auto"
 {pagina==="financeiro" && <Financeiro empresaId={empresaId} />}
 {pagina==="lucro" && role==="admin" && <Lucro />}
 {pagina==="despesas" && <DespesasPessoais />}
+{pagina==="relatorio" && <Relatorio empresaId={empresaId} />} {/* 🔥 NOVO */}
 {pagina==="admin" && <Admin />}
 {pagina==="master" && role==="admin" && <MasterAdmin />}
 
