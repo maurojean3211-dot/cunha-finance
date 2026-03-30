@@ -6,6 +6,8 @@ export default function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [nome, setNome] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [empresaId, setEmpresaId] = useState(null);
 
   useEffect(() => {
@@ -39,7 +41,6 @@ export default function Clientes() {
 
     setEmpresaId(data.empresa_id);
     carregarClientes(data.empresa_id);
-
   }
 
   async function carregarClientes(empId) {
@@ -52,14 +53,15 @@ export default function Clientes() {
 
     if (error) {
       console.log(error);
+      alert("Erro ao carregar clientes");
       return;
     }
 
     setClientes(data || []);
   }
 
-  function limparTelefone(tel) {
-    return tel.replace(/\D/g, "");
+  function limparNumero(valor) {
+    return valor.replace(/\D/g, "");
   }
 
   async function salvarCliente(){
@@ -79,7 +81,8 @@ export default function Clientes() {
       return;
     }
 
-    const telefoneLimpo = limparTelefone(telefone);
+    const telefoneLimpo = limparNumero(telefone);
+    const cpfLimpo = limparNumero(cpf);
 
     const { data, error } = await supabase
       .from("clientes")
@@ -87,6 +90,8 @@ export default function Clientes() {
         {
           nome: nome.trim(),
           telefone: telefoneLimpo,
+          email: email || null,
+          cpf: cpfLimpo || null,
           empresa_id: empresaId
         }
       ])
@@ -102,10 +107,10 @@ export default function Clientes() {
 
     setNome("");
     setTelefone("");
-
+    setEmail("");
+    setCpf("");
   }
 
-  // 🔥 EXCLUIR CORRIGIDO (SEGURO)
   async function excluirCliente(id) {
 
     if (!window.confirm("Excluir cliente?")) return;
@@ -114,7 +119,7 @@ export default function Clientes() {
       .from("clientes")
       .delete()
       .eq("id", id)
-      .eq("empresa_id", empresaId); // 🔒 PROTEÇÃO
+      .eq("empresa_id", empresaId);
 
     if (error) {
       console.log(error);
@@ -123,7 +128,6 @@ export default function Clientes() {
     }
 
     setClientes(prev => prev.filter(c => c.id !== id));
-
   }
 
   return (
@@ -143,17 +147,27 @@ export default function Clientes() {
       />
 
       <input
-        placeholder="WhatsApp (ex: 31999993068)"
+        placeholder="WhatsApp"
         value={telefone}
         onChange={(e)=>setTelefone(e.target.value)}
         style={inputStyle}
       />
 
-      <button
-        type="button"
-        onClick={salvarCliente}
-        style={buttonStyle}
-      >
+      <input
+        placeholder="Email (opcional)"
+        value={email}
+        onChange={(e)=>setEmail(e.target.value)}
+        style={inputStyle}
+      />
+
+      <input
+        placeholder="CPF (opcional)"
+        value={cpf}
+        onChange={(e)=>setCpf(e.target.value)}
+        style={inputStyle}
+      />
+
+      <button onClick={salvarCliente} style={buttonStyle}>
         Salvar Cliente
       </button>
 
@@ -166,6 +180,9 @@ export default function Clientes() {
             <strong>{c.nome}</strong>
             <br />
             📱 {c.telefone}
+            <br />
+            {c.email && <>📧 {c.email}<br /></>}
+            {c.cpf && <>🧾 {c.cpf}</>}
           </div>
 
           <button
@@ -185,7 +202,7 @@ export default function Clientes() {
 const inputStyle = {
   display:"block",
   marginBottom:10,
-  padding:8,
+  padding:10,
   width:"100%",
   borderRadius:6,
   border:"none"
@@ -197,7 +214,8 @@ const buttonStyle = {
   border:"none",
   background:"#2563eb",
   color:"#fff",
-  cursor:"pointer"
+  cursor:"pointer",
+  marginBottom:10
 };
 
 const deleteStyle = {
@@ -211,8 +229,8 @@ const deleteStyle = {
 
 const cardStyle = {
   background:"#1f2937",
-  padding:10,
-  borderRadius:6,
+  padding:12,
+  borderRadius:8,
   marginBottom:10,
   display:"flex",
   justifyContent:"space-between",

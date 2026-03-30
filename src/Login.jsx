@@ -6,6 +6,7 @@ export default function Login({ onLogin }) {
   const [senha, setSenha] = useState("");
   const [cpf, setCpf] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [nome, setNome] = useState("");
   const [loading, setLoading] = useState(false);
 
   // 🔥 LOGIN
@@ -32,21 +33,23 @@ export default function Login({ onLogin }) {
     }
   }
 
-  // 🔥 CRIAR CONTA
+  // 🔥 CRIAR CONTA COMPLETA (CORRIGIDO)
   async function criarConta() {
     try {
-      if (!email || !senha) {
-        alert("Preencha email e senha");
+      if (!nome || !email || !senha) {
+        alert("Preencha nome, email e senha");
         return;
       }
 
       setLoading(true);
 
+      // 🔹 1. cria login COM nome no metadata
       const { data, error } = await supabase.auth.signUp({
         email,
         password: senha,
         options: {
           data: {
+            nome,
             cpf,
             whatsapp,
           },
@@ -63,25 +66,63 @@ export default function Login({ onLogin }) {
         return;
       }
 
-      // 👉 salva na tabela usuarios (opcional)
-      const { error: erroTabela } = await supabase
+      // 🔹 2. verifica se já existe empresa
+      let { data: empresa } = await supabase
+        .from("empresas")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+      // 🔹 se não existir, cria
+      if (!empresa) {
+        const { data: novaEmpresa, error: erroEmpresa } = await supabase
+          .from("empresas")
+          .insert([
+            {
+              name: nome,
+              email: email,
+              tipo: "Empresa",
+              plano: "Básico",
+              status: "Ativo"
+            },
+          ])
+          .select()
+          .single();
+
+        if (erroEmpresa || !novaEmpresa) {
+          console.log(erroEmpresa);
+          alert("Erro ao criar empresa");
+          return;
+        }
+
+        empresa = novaEmpresa;
+      }
+
+      // 🔹 3. salva usuario
+      const { error: erroUsuario } = await supabase
         .from("usuarios")
         .insert([
           {
             id: data.user.id,
-            email,
-            cpf,
-            whatsapp,
+            nome: nome,
+            email: email,
+            cpf: cpf,
+            whatsapp: whatsapp,
+            empresa_id: empresa.id,
+            tipo_usuario: "ADMIN",
           },
         ]);
 
-      if (erroTabela) {
-        console.log("Erro ao salvar na tabela:", erroTabela.message);
+      if (erroUsuario) {
+        console.log(erroUsuario);
+        alert("Erro ao salvar usuário");
+        return;
       }
 
-      alert("Conta criada! Verifique seu email.");
+      alert("Conta criada com sucesso! 🎉");
 
     } catch (err) {
+      console.log(err);
       alert("Erro ao criar conta");
     } finally {
       setLoading(false);
@@ -110,6 +151,13 @@ export default function Login({ onLogin }) {
       <img src="/logo.png" style={styles.logo} />
 
       <h2>Cunha Finance</h2>
+
+      <input
+        style={styles.input}
+        placeholder="Nome completo"
+        value={nome}
+        onChange={(e) => setNome(e.target.value)}
+      />
 
       <input
         style={styles.input}
